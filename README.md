@@ -42,3 +42,7 @@ The engine in `src/engine` works in printer dots, not CSS pixels.
 `src/api/types.ts` defines `LabelcraftApi`. `src/api/mock.ts` implements it in memory with realistic latency and a print queue that reports progress per label. It rejects jobs when the printer is offline or has a different roll loaded. To connect real services, implement the same interface over HTTP and assign it in `src/state/store.ts`.
 
 Print jobs carry one 1-bit PNG per label, already rotated into feed orientation (`toFeedOrientation`), ready for a `brother_ql`-style raster backend.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE). Bundled fonts are under the SIL Open Font License via Fontsource.
