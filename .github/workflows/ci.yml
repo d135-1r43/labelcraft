@@ -1,0 +1,122 @@
+name: CI
+
+## main publishes `latest`; a vX.Y.Z tag from `./mvnw release:prepare`
+## publishes X.Y.Z, X.Y and X. Pull requests build and test only.
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      ## The typography engine's tests; Quinoa only builds the frontend.
+      - name: Test the frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+
+      ## Formatting check, backend tests against PostgreSQL from Dev Services,
+      ## and the frontend built into the jar by Quinoa.
+      - name: Build and test
+        run: ./mvnw verify -B
+
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/labelcraft
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,format=long
+
+      ## Into the runner's Docker first, so the next step can start it.
+      - name: Build the image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/main/docker/Dockerfile.jvm
+          load: true
+          push: false
+          tags: |
+            labelcraft:smoke
+            ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      ## Nothing has started the packaged app until here. Against a real
+      ## PostgreSQL: Flyway migrates, the seeder fills the tables, Quinoa
+      ## serves the UI, and a print job renders a PDF with AWT in the image.
+      - name: Check the image serves
+        run: |
+          set -eu
+          docker network create smoke
+          docker run -d --name smoke-db --network smoke \
+            -e POSTGRES_USER=labelcraft -e POSTGRES_PASSWORD=labelcraft -e POSTGRES_DB=labelcraft \
+            postgres:17
+          docker run -d --name smoke-app --network smoke -p 8080:8080 \
+            -e DB_URL=jdbc:postgresql://smoke-db:5432/labelcraft \
+            labelcraft:smoke
+          ok=
+          for _ in $(seq 1 45); do
+            if curl -fsS http://localhost:8080/api/records/signs | grep -q zerbrechlich; then ok=1; break; fi
+            sleep 2
+          done
+          if [ -z "$ok" ]; then docker logs smoke-app; echo "The image never served its records." >&2; exit 1; fi
+          curl -fsS http://localhost:8080/ | grep -q 'id="root"'
+          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==' | base64 -d > label.png
+          curl -fsS http://localhost:8080/api/print-jobs \
+            -F 'job={"printerId":"p-office","mediaId":"DK-11201","kind":"text","copies":1,"titles":["Smoke"],"geometry":{"widthMm":90,"heightMm":29,"offsetXMm":3,"offsetYMm":1,"printableWidthMm":84,"printableHeightMm":26}};type=application/json' \
+            -F 'page=@label.png;type=image/png' | tee job.json | grep -q '"state":"done"'
+          curl -fsS "http://localhost:8080$(sed -E 's/.*"pdfUrl":"([^"]+)".*/\1/' job.json)" | head -c 5 | grep -q '%PDF-'
+
+      - name: Stop the containers
+        if: always()
+        run: |
+          docker rm -f smoke-app smoke-db || true
+          docker network rm smoke || true
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      ## The same build again, from the layers the step above already made.
+      - name: Push the image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/main/docker/Dockerfile.jvm
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

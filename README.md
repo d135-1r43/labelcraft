@@ -3,9 +3,25 @@
 A label designer for Brother QL printers that knows what it is printing. You don't draw text boxes. You choose what the label is (an address, an asset tag, a shelf location, a food date or a sign), point it at a record, and Labelcraft sets it.
 
 ```
-npm install
-npm run dev      # http://localhost:5178
-npm test         # engine and address tests
+./mvnw quarkus:dev    # http://localhost:8080 — API, database and the React app
+./mvnw test           # backend tests (PostgreSQL via Dev Services)
+cd frontend && npm test   # engine and address tests
+```
+
+Dev mode needs Docker running: Quarkus starts PostgreSQL itself. Quinoa runs the Vite dev server from `frontend/` and serves it on the same port, with hot reload.
+
+## Layout
+
+```
+pom.xml                    Quarkus (REST, Hibernate ORM with Panache, Flyway, Quinoa)
+src/main/java/…            backend: records, settings, printing, seed
+src/main/resources/
+  application.properties
+  db/migration/            Flyway schema
+  seed/                    sample organisation: contacts, inventory, printers …
+frontend/                  React app (Vite, TypeScript)
+  src/engine/              typography, barcodes, rendering
+  src/kinds/               the label types
 ```
 
 ## What each label knows
@@ -39,15 +55,55 @@ The engine in `src/engine` works in printer dots, not CSS pixels.
 
 ## Records and leading systems
 
-Labelcraft has its own database (`src/db`): one collection per entity (contacts, inventory, locations, recipes, signs), kept in the browser for now. Everything is edited in Labelcraft, but the organisation's CRM, inventory or ERP stays the source of truth: every record carries a `uri` to its original there. The record panel shows the link, opens it, and offers to link by asset tag or bin code when the leading system addresses records that way. Asset QR codes encode that link.
+Labelcraft keeps its own database of the records it prints: contacts, inventory, locations, recipes and signs, one PostgreSQL table each. Everything is edited in Labelcraft, but the organisation's CRM, inventory or ERP stays the source of truth: every record carries a `uri` to its original there. The record panel shows the link, opens it, and offers to link by asset tag or bin code when the leading system addresses records that way. Asset QR codes encode that link.
 
-In **Preferences** (gear, top right) each entity can be switched off, which removes its labels from the sidebar, and given a leading system: a name and the base URL its records live under. Records whose link points elsewhere, or that have none, are flagged.
+In **Preferences** (cog, top right) each label type is a card with a live preview. It can be switched off, which removes it from the sidebar, and given a leading system: a name and the base URL its records live under.
+
+On a fresh database the sample organisation is seeded from `src/main/resources/seed` (`labelcraft.seed-on-start`).
 
 ## Backend
 
-`src/api/types.ts` defines `LabelcraftApi`: organisation, printers and printing. `src/api/mock.ts` implements it in memory with realistic latency and a print queue that reports progress per label. It rejects jobs when the printer is offline or has a different roll loaded. To connect real services, implement the same interface over HTTP and assign it in `src/state/store.ts`.
+Quarkus with Hibernate ORM and Panache in the repository pattern: one `PanacheRepositoryBase` per entity, services own the transactions, resources stay thin. The schema is managed by Flyway.
 
-Print jobs carry one 1-bit PNG per label, already rotated into feed orientation (`toFeedOrientation`), ready for a `brother_ql`-style raster backend.
+| Endpoint | |
+|---|---|
+| `GET /api/records/{collection}` | `contacts`, `inventory`, `locations`, `recipes`, `signs` |
+| `PUT /api/records/{collection}/{id}` | create or replace; ids are chosen by the client |
+| `DELETE /api/records/{collection}/{id}` | removes Labelcraft's copy only |
+| `POST /api/records/{collection}/reset` | restore the samples |
+| `GET`, `PUT /api/settings/entities[/{id}]` | on/off and leading system per entity |
+| `GET /api/organisation` | from `labelcraft.organisation.*` |
+| `GET /api/printers` | printers and their loaded roll (simulated) |
+| `POST /api/print-jobs` | multipart: `job` (JSON) and one `page` PNG per label |
+| `GET /api/print-jobs`, `GET /api/print-jobs/{id}/pdf` | recent jobs and their PDFs |
+
+OpenAPI at `/q/openapi`, Swagger UI at `/q/swagger-ui` in dev mode.
+
+## Printing
+
+Until printers are driven directly, a print job becomes a PDF with one page per label at the label's physical size. Print it through the Brother driver at 100 %; the PDF switches print scaling off. The print bar offers two ways to make it, so the two can be compared on a real printer:
+
+- **Exact dots** (default): the server places the 1-bit 300 dpi raster over the printable area, the dots exactly as the preview shows them. Two-colour labels keep their red.
+- **Vector**: the browser writes the PDF (`frontend/src/engine/pdf.ts`, pdf-lib). Text becomes glyph outlines from the bundled fonts, with kerning and tracking as on screen; rules and boxes keep their dot-grid positions. Barcodes stay images with one pixel per printer dot, because a module that lands between dots prints at the wrong width. The driver rasterizes, which on QL-8xx models can mean 300 × 600 dpi. Set the driver's halftone to binary, not dither.
+
+Java formatting follows [pruefstein](https://github.com/explore-de/pruefstein): the Eclipse profile in `formatter/java.xml` and import order are checked at `validate`; `./mvnw formatter:format impsort:sort` fixes them.
+
+Guides: [Quinoa](https://docs.quarkiverse.io/quarkus-quinoa/dev/), [Hibernate ORM with Panache](https://quarkus.io/guides/hibernate-orm-panache), [Flyway](https://quarkus.io/guides/flyway), [Dev Services for databases](https://quarkus.io/guides/databases-dev-services), [REST](https://quarkus.io/guides/rest).
+
+## Build and release
+
+GitHub Actions (`.github/workflows/ci.yml`) tests the frontend and the backend, builds the JVM image, and starts it against PostgreSQL to check that it serves records, the UI and a print job's PDF.
+
+- A push to `main` publishes `ghcr.io/<owner>/labelcraft:latest`.
+- `./mvnw release:prepare` sets the version, tags `vX.Y.Z` and pushes; the tag publishes `X.Y.Z`, `X.Y` and `X`. `release:perform` only verifies the tag; nothing goes to a Maven repository.
+
+Production reads `DB_URL`, `DB_USER` and `DB_PASSWORD`:
+
+```
+docker run -p 8080:8080 -e DB_URL=jdbc:postgresql://db:5432/labelcraft ghcr.io/<owner>/labelcraft:latest
+```
+
+Dependabot opens one pull request per ecosystem and week (Maven, npm, GitHub Actions, Docker), with every update in it.
 
 ## Licence
 

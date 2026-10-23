@@ -1,0 +1,51 @@
+version: 2
+
+## One pull request per ecosystem and week: every update in it, majors
+## included. CI builds, tests and starts the image, so a big batch that
+## passes is safe to merge, and one that fails is split by hand.
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "⬆️ chore"
+    groups:
+      maven:
+        patterns: [ "*" ]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "⬆️ chore"
+    groups:
+      npm:
+        patterns: [ "*" ]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "⬆️ chore"
+    groups:
+      github-actions:
+        patterns: [ "*" ]
+
+  - package-ecosystem: docker
+    directory: /src/main/docker
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "🐳 chore"
+    groups:
+      docker:
+        patterns: [ "*" ]

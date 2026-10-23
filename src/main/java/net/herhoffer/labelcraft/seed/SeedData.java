@@ -1,0 +1,54 @@
+package net.herhoffer.labelcraft.seed;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.time.Instant;
+import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.enterprise.context.ApplicationScoped;
+import net.herhoffer.labelcraft.records.RecordCollection;
+import net.herhoffer.labelcraft.records.RecordEntity;
+
+/** The sample organisation's data, from {@code src/main/resources/seed}. */
+@ApplicationScoped
+public class SeedData
+{
+
+	private final ObjectMapper mapper;
+
+	SeedData(ObjectMapper mapper)
+	{
+		this.mapper = mapper;
+	}
+
+	public <T> List<T> read(String name, Class<T> type)
+	{
+		try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream("seed/" + name + ".json"))
+		{
+			if (in == null) throw new IllegalStateException("Missing seed/" + name + ".json");
+			return mapper.readerForListOf(type).readValue(in);
+		}
+		catch (IOException e)
+		{
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	/**
+	 * Insert a collection's samples, keeping their order. Call inside a
+	 * transaction.
+	 */
+	public <T extends RecordEntity> void insert(RecordCollection<T> c)
+	{
+		Instant base = Instant.now();
+		List<T> recs = read(c.id(), c.type());
+		for (int i = 0; i < recs.size(); i++)
+		{
+			T r = recs.get(i);
+			r.createdAt = base.plusMillis(i);
+			c.repository().persist(r);
+		}
+	}
+}

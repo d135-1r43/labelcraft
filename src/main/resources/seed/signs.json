@@ -1,0 +1,22 @@
+[
+  {
+    "id": "t1",
+    "title": "Vorsicht, zerbrechlich",
+    "subtitle": "Bitte nicht werfen -- Inhalt: Glas"
+  },
+  {
+    "id": "t2",
+    "title": "Serverraum 2.14",
+    "subtitle": "Zutritt nur für \"IT-Betrieb\""
+  },
+  {
+    "id": "t3",
+    "title": "Do not switch off",
+    "subtitle": "Backup runs nightly, 02:00-04:30"
+  },
+  {
+    "id": "t4",
+    "title": "Donaudampfschifffahrtskapitänsmütze",
+    "subtitle": "Hyphenation test"
+  }
+]

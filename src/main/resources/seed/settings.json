@@ -1,0 +1,7 @@
+[
+  { "id": "contacts", "enabled": true, "name": "CRM", "baseUrl": "https://crm.nordlicht.de/contacts/" },
+  { "id": "inventory", "enabled": true, "name": "Inventory", "baseUrl": "https://inv.nordlicht.de/a/" },
+  { "id": "locations", "enabled": true, "name": "ERP", "baseUrl": "https://erp.nordlicht.de/wm/bins/" },
+  { "id": "recipes", "enabled": true, "name": "Recipe book", "baseUrl": "https://kitchen.nordlicht.de/recipes/" },
+  { "id": "signs", "enabled": true, "name": "", "baseUrl": "" }
+]

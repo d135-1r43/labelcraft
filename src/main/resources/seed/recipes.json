@@ -1,0 +1,108 @@
+[
+  {
+    "id": "f1",
+    "name": "Rinderbrühe, hausgemacht",
+    "category": "Fonds & Suppen",
+    "shelfLifeHours": 72,
+    "storage": "chilled",
+    "allergens": [
+      "L"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/rinderbruhe-hausgemacht"
+  },
+  {
+    "id": "f2",
+    "name": "Sauce hollandaise",
+    "category": "Saucen",
+    "shelfLifeHours": 4,
+    "storage": "ambient",
+    "allergens": [
+      "C",
+      "G"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/sauce-hollandaise"
+  },
+  {
+    "id": "f3",
+    "name": "Basilikumpesto",
+    "category": "Saucen",
+    "shelfLifeHours": 120,
+    "storage": "chilled",
+    "allergens": [
+      "G",
+      "H"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/basilikumpesto"
+  },
+  {
+    "id": "f4",
+    "name": "Pizzateig, 24 h geführt",
+    "category": "Teige",
+    "shelfLifeHours": 48,
+    "storage": "chilled",
+    "allergens": [
+      "A"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/pizzateig-24-h-gefuhrt"
+  },
+  {
+    "id": "f5",
+    "name": "Gravlax vom Lachs",
+    "category": "Fisch",
+    "shelfLifeHours": 96,
+    "storage": "chilled",
+    "allergens": [
+      "D",
+      "M"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/gravlax-vom-lachs"
+  },
+  {
+    "id": "f6",
+    "name": "Rotkohl, geschmort",
+    "category": "Beilagen",
+    "shelfLifeHours": 2160,
+    "storage": "frozen",
+    "allergens": [
+      "O"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/rotkohl-geschmort"
+  },
+  {
+    "id": "f7",
+    "name": "Sesam-Erdnuss-Dressing",
+    "category": "Saucen",
+    "shelfLifeHours": 168,
+    "storage": "chilled",
+    "allergens": [
+      "E",
+      "F",
+      "N"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/sesam-erdnuss-dressing"
+  },
+  {
+    "id": "f8",
+    "name": "Vanillepudding",
+    "category": "Desserts",
+    "shelfLifeHours": 48,
+    "storage": "chilled",
+    "allergens": [
+      "C",
+      "G"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/vanillepudding"
+  },
+  {
+    "id": "f9",
+    "name": "Granola mit Haselnüssen",
+    "category": "Frühstück",
+    "shelfLifeHours": 504,
+    "storage": "ambient",
+    "allergens": [
+      "A",
+      "H"
+    ],
+    "uri": "https://kitchen.nordlicht.de/recipes/granola-mit-haselnussen"
+  }
+]

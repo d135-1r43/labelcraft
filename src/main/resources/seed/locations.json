@@ -1,0 +1,188 @@
+[
+  {
+    "id": "l1",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "A"
+      },
+      {
+        "label": "rack",
+        "value": "03"
+      },
+      {
+        "label": "shelf",
+        "value": "2"
+      }
+    ],
+    "area": "Workshop stores",
+    "contents": "Senkkopfschrauben M3 × 12, Edelstahl A2",
+    "sku": "DIN 7991",
+    "arrow": "down",
+    "uri": "https://erp.nordlicht.de/wm/bins/A-03-2"
+  },
+  {
+    "id": "l2",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "A"
+      },
+      {
+        "label": "rack",
+        "value": "03"
+      },
+      {
+        "label": "shelf",
+        "value": "3"
+      }
+    ],
+    "area": "Workshop stores",
+    "contents": "Senkkopfschrauben M4 × 16, Edelstahl A2",
+    "sku": "DIN 7991",
+    "arrow": "down",
+    "uri": "https://erp.nordlicht.de/wm/bins/A-03-3"
+  },
+  {
+    "id": "l3",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "A"
+      },
+      {
+        "label": "rack",
+        "value": "04"
+      },
+      {
+        "label": "shelf",
+        "value": "1"
+      }
+    ],
+    "area": "Workshop stores",
+    "contents": "Unterlegscheiben M3–M8, sortiert",
+    "arrow": "up",
+    "uri": "https://erp.nordlicht.de/wm/bins/A-04-1"
+  },
+  {
+    "id": "l4",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "B"
+      },
+      {
+        "label": "rack",
+        "value": "01"
+      },
+      {
+        "label": "shelf",
+        "value": "1"
+      }
+    ],
+    "area": "Packaging",
+    "contents": "Versandkartons 300 × 200 × 150 mm",
+    "arrow": "down",
+    "uri": "https://erp.nordlicht.de/wm/bins/B-01-1"
+  },
+  {
+    "id": "l5",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "B"
+      },
+      {
+        "label": "rack",
+        "value": "01"
+      },
+      {
+        "label": "shelf",
+        "value": "2"
+      }
+    ],
+    "area": "Packaging",
+    "contents": "Luftpolsterfolie, Rolle 50 cm",
+    "arrow": "up",
+    "uri": "https://erp.nordlicht.de/wm/bins/B-01-2"
+  },
+  {
+    "id": "l6",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "B"
+      },
+      {
+        "label": "rack",
+        "value": "02"
+      },
+      {
+        "label": "shelf",
+        "value": "4"
+      }
+    ],
+    "area": "Packaging",
+    "contents": "DK-11202 Versandetiketten, Ersatzrollen",
+    "uri": "https://erp.nordlicht.de/wm/bins/B-02-4"
+  },
+  {
+    "id": "l7",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "C"
+      },
+      {
+        "label": "rack",
+        "value": "12"
+      },
+      {
+        "label": "shelf",
+        "value": "1"
+      }
+    ],
+    "area": "Electronics",
+    "contents": "Widerstände E12, 1/4 W, Metallfilm",
+    "arrow": "left",
+    "uri": "https://erp.nordlicht.de/wm/bins/C-12-1"
+  },
+  {
+    "id": "l8",
+    "segments": [
+      {
+        "label": "aisle",
+        "value": "C"
+      },
+      {
+        "label": "rack",
+        "value": "12"
+      },
+      {
+        "label": "shelf",
+        "value": "2"
+      }
+    ],
+    "area": "Electronics",
+    "contents": "Kondensatoren, Elko 10–1000 µF",
+    "arrow": "right",
+    "uri": "https://erp.nordlicht.de/wm/bins/C-12-2"
+  },
+  {
+    "id": "l9",
+    "segments": [
+      {
+        "label": "zone",
+        "value": "K"
+      },
+      {
+        "label": "rack",
+        "value": "7"
+      }
+    ],
+    "area": "Cold room",
+    "contents": "Molkereiprodukte, ungeöffnet",
+    "arrow": "down",
+    "uri": "https://erp.nordlicht.de/wm/bins/K-7"
+  }
+]

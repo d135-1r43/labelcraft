@@ -1,0 +1,7 @@
+[
+  { "id": "p-office", "name": "Office", "model": "QL-820NWB", "location": "Front desk", "connection": "Wi-Fi", "status": "ready", "loadedMedia": "DK-11201", "remaining": "312 labels" },
+  { "id": "p-ship", "name": "Shipping", "model": "QL-1110NWB", "location": "Dispatch", "connection": "Ethernet", "status": "ready", "loadedMedia": "DK-11202", "remaining": "188 labels" },
+  { "id": "p-shop", "name": "Workshop", "model": "QL-810W", "location": "Workshop bench", "connection": "Wi-Fi", "status": "ready", "loadedMedia": "DK-22205", "remaining": "21.4 m" },
+  { "id": "p-kitchen", "name": "Kitchen", "model": "QL-820NWB", "location": "Canteen", "connection": "Wi-Fi", "status": "ready", "loadedMedia": "DK-22251", "remaining": "9.8 m" },
+  { "id": "p-store", "name": "Stores", "model": "QL-700", "location": "Warehouse", "connection": "USB", "status": "offline", "loadedMedia": "DK-11204" }
+]
