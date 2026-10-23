@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadFonts } from './engine/fonts';
 import { kindById } from './kinds';
 import { compose, useNow } from './state/compose';
-import { recordsOf, useKindState, useStore } from './state/store';
+import { entityById } from './db/entities';
+import { useKindState, useRecords, useStore } from './state/store';
 import { Inspector } from './ui/Inspector';
 import { KindRail, SourcePanel } from './ui/Source';
 import { Stage, type BatchItem } from './ui/Stage';
+import { Preferences } from './ui/Preferences';
 import { TopBar } from './ui/TopBar';
 
 function Toast() {
@@ -40,8 +42,7 @@ export function App() {
   const boot = useStore((s) => s.boot);
   const kindId = useStore((s) => s.kindId);
   const ks = useKindState();
-  const records = useStore((s) => s.records);
-  const drafts = useStore((s) => s.drafts);
+  const all = useRecords(kindId);
   const locale = useStore((s) => s.locale);
   const org = useStore((s) => s.org);
   const printers = useStore((s) => s.printers);
@@ -55,10 +56,10 @@ export function App() {
     void boot();
   }, [boot]);
 
-  const all = useMemo(() => recordsOf({ records, drafts }, kindId), [records, drafts, kindId]);
   const byId = useMemo(() => new Map(all.map((r) => [r.id, r])), [all]);
   const printer = printers.find((p) => p.id === printerId);
   const def = kindById(kindId);
+  const entity = entityById(def.entity);
 
   // Food labels follow the clock; everything else only recomposes when its inputs change.
   const clock = kindId === 'food' ? now : null;
@@ -67,8 +68,8 @@ export function App() {
     return ks.selection
       .map((id) => byId.get(id))
       .filter((r): r is NonNullable<typeof r> => !!r)
-      .map((rec) => ({ id: rec.id, title: def.source.title(rec), composed: compose({ kindId, rec, ks, locale, org, printer, now: clock ?? new Date() }) }));
-  }, [fontsReady, org, ks, byId, def, kindId, locale, printer, clock]);
+      .map((rec) => ({ id: rec.id, title: entity.title(rec), composed: compose({ kindId, rec, ks, locale, org, printer, now: clock ?? new Date() }) }));
+  }, [fontsReady, org, ks, byId, def, entity, kindId, locale, printer, clock]);
 
   const activeIndex = Math.max(0, items.findIndex((i) => i.id === ks.activeId));
   const activeRec = (ks.activeId && byId.get(ks.activeId)) || null;
@@ -103,6 +104,7 @@ export function App() {
       <Stage items={items} activeIndex={activeIndex} />
       <Inspector items={items} activeIndex={activeIndex} activeRec={activeRec} now={now} />
       <Toast />
+      <Preferences />
     </div>
   );
 }

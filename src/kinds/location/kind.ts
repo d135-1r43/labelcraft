@@ -1,4 +1,5 @@
-import type { StorageLocation } from '../../api/types';
+import { locationCode } from '../../db/entities';
+import type { StorageLocation } from '../../db/types';
 import { placeCode } from '../../engine/barcode';
 import type { DrawOp, Issue } from '../../engine/display';
 import { fitText, measure, setLine, sizeForCapHeight, type TextStyle } from '../../engine/text';
@@ -42,8 +43,6 @@ function arrowPoints(x: number, y: number, s: number, dir: 'up' | 'down' | 'left
   });
 }
 
-export const locationCode = (l: StorageLocation) => l.segments.map((s) => s.value).join('-');
-
 export const locationKind: KindDef<StorageLocation, LocationOptions> = {
   id: 'location',
   name: 'Storage location',
@@ -52,15 +51,8 @@ export const locationKind: KindDef<StorageLocation, LocationOptions> = {
   media: ['DK-11203', 'DK-11204', 'DK-11201', 'DK-22205', 'DK-22212'],
   defaultTypeSystem: 'atkinson',
   defaultOptions: { arrow: 'auto', barcode: true, contents: true },
-  source: {
-    name: 'Warehouse',
-    noun: 'location',
-    load: (api) => api.locations(),
-    title: (l) => locationCode(l),
-    subtitle: (l) => l.contents,
-    group: (l) => l.area,
-    editable: false,
-  },
+  entity: 'locations',
+
 
   layout(loc, o, { m, frame, ts, locale }) {
     const ops: DrawOp[] = [];

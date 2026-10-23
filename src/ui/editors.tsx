@@ -1,23 +1,106 @@
-import { useState } from 'react';
-import type { Contact, FoodProduct, InventoryItem, StorageLocation } from '../api/types';
+import { useMemo, useState } from 'react';
+import { entityById, hostOf, isUri, locationCode } from '../db/entities';
+import type { AllergenCode, Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageLocation } from '../db/types';
 import { countryName, normalizePostcode, parseAddress, ruleFor, SUPPORTED_COUNTRIES } from '../kinds/address/address';
 import type { AddressOptions } from '../kinds/address/kind';
 import type { AssetOptions } from '../kinds/asset/kind';
 import { ALLERGENS, useBy, type FoodOptions } from '../kinds/food/kind';
-import { locationCode, type LocationOptions } from '../kinds/location/kind';
-import type { TextNote, TextOptions } from '../kinds/text/kind';
-import { useStore } from '../state/store';
+import type { LocationOptions } from '../kinds/location/kind';
+import type { TextOptions } from '../kinds/text/kind';
+import { kindById } from '../kinds';
+import { useRecords, useStore } from '../state/store';
 import { Field, Section, Segmented, TextInput, Toggle, relativeTime } from './controls';
 import { Icon } from './icons';
 
 export interface EditorProps<R, O> {
   rec: R;
   options: O;
-  edited: boolean;
   onChange(rec: R): void;
   setOption(key: keyof O & string, value: unknown): void;
   now: Date;
 }
+
+/* ───────── the record and its leading system ───────── */
+
+/** The link to the record in its leading system, plus removal of Labelcraft's copy. */
+export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(rec: DbRecord): void; now: Date }) {
+  const kindId = useStore((s) => s.kindId);
+  const entity = entityById(kindById(kindId).entity);
+  const prefs = useStore((s) => s.entities[entity.id]);
+  const deleteRecord = useStore((s) => s.deleteRecord);
+  const [confirming, setConfirming] = useState(false);
+  const uri = rec.uri ?? '';
+  const system = prefs.name || hostOf(prefs.baseUrl) || 'the leading system';
+  const valid = !uri || isUri(uri);
+  const outside = valid && !!uri && !!prefs.baseUrl && !uri.startsWith(prefs.baseUrl);
+  const key = entity.key?.(rec);
+  const suggestion = !uri && prefs.baseUrl && key ? prefs.baseUrl + encodeURIComponent(key) : null;
+
+  const hint = !valid
+    ? 'Not a complete address. It should start with https://'
+    : outside
+      ? `Outside ${hostOf(prefs.baseUrl)}, where ${system} keeps its ${entity.plural}`
+      : uri
+        ? `${system} leads. Labelcraft prints from its own copy.`
+        : prefs.baseUrl
+          ? `Not linked. Paste the address of this ${entity.noun} in ${system}.`
+          : `Optional. ${entity.name} live in Labelcraft unless you set a leading system in Preferences.`;
+
+  return (
+    <Section
+      title="Record"
+      aside={
+        <button
+          className={`btn ghost small${confirming ? ' danger' : ''}`}
+          onClick={() => (confirming ? deleteRecord(rec.id) : setConfirming(true))}
+          onBlur={() => setConfirming(false)}
+          title={uri ? `Removes Labelcraft's copy. The record in ${system} stays.` : undefined}
+        >
+          {confirming ? `Remove this ${entity.noun}` : 'Remove'}
+        </button>
+      }
+    >
+      <Field label={prefs.baseUrl ? `In ${system}` : 'Link'} hint={hint}>
+        <div className="uri">
+          <TextInput className="input num" value={uri} invalid={!valid || outside} placeholder={prefs.baseUrl ? `${prefs.baseUrl}…` : 'https://…'} spellCheck={false} onChange={(v) => onChange({ ...rec, uri: v.trim() || undefined })} />
+          <a className="btn icon" href={valid && uri ? uri : undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!valid || !uri} aria-label={`Open in ${system}`} title={`Open in ${system}`}>
+            <Icon.external />
+          </a>
+        </div>
+      </Field>
+      {suggestion && (
+        <button className="btn small" style={{ justifySelf: 'start' }} onClick={() => onChange({ ...rec, uri: suggestion })}>
+          <Icon.link /> Link as …/{encodeURIComponent(key!)}
+        </button>
+      )}
+      {rec.updatedAt && <div className="meta">Changed in Labelcraft {relativeTime(rec.updatedAt, now.getTime())}</div>}
+    </Section>
+  );
+}
+
+/** A grouping field (category, area, group) that offers the values already in use. */
+function GroupField({ label, value, entityKind, read, onChange }: { label: string; value: string; entityKind: Parameters<typeof useRecords>[0]; read(r: never): string; onChange(v: string): void }) {
+  const records = useRecords(entityKind);
+  const id = `groups-${entityKind}`;
+  const values = useMemo(() => [...new Set(records.map((r) => read(r as never)).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [records, read]);
+  return (
+    <Field label={label}>
+      <TextInput value={value} list={id} onChange={onChange} />
+      <datalist id={id}>
+        {values.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+    </Field>
+  );
+}
+
+const groupOf = {
+  contact: (r: Contact) => r.group,
+  asset: (r: InventoryItem) => r.category,
+  location: (r: StorageLocation) => r.area,
+  food: (r: FoodProduct) => r.category,
+};
 
 /* ───────── address ───────── */
 
@@ -73,13 +156,11 @@ function PasteAddress({ country, onParsed }: { country: string; onParsed: (a: Re
 
 const countryOptions = [...SUPPORTED_COUNTRIES].sort((a, b) => countryName(a, 'en').localeCompare(countryName(b, 'en')));
 
-export function AddressEditor({ rec, options, edited, onChange, setOption }: EditorProps<Contact, AddressOptions>) {
+export function AddressEditor({ rec, options, onChange, setOption }: EditorProps<Contact, AddressOptions>) {
   const locale = useStore((s) => s.locale);
-  const removeDraft = useStore((s) => s.removeDraft);
   const rule = ruleFor(rec.country);
   const set = (patch: Partial<Contact>) => onChange({ ...rec, ...patch });
   const pcValid = !rec.postalCode || !rule.postcode || rule.postcode.re.test(normalizePostcode(rec.country, rec.postalCode) ?? '');
-  const isLocal = rec.id.startsWith('local-');
   const cityLabel = rec.country === 'GB' ? 'Post town' : rec.country === 'US' || rec.country === 'CA' ? 'City' : 'Town or city';
 
   const street = (
@@ -113,19 +194,8 @@ export function AddressEditor({ rec, options, edited, onChange, setOption }: Edi
 
   return (
     <>
-      <Section
-        title="Recipient"
-        aside={
-          edited ? (
-            <button className="btn ghost small" onClick={() => removeDraft(rec.id)}>
-              {isLocal ? 'Delete' : 'Revert to contact'}
-            </button>
-          ) : (
-            'From contacts'
-          )
-        }
-      >
-        <PasteAddress country={rec.country} onParsed={({ address }) => onChange({ id: rec.id, group: rec.group, ...address })} />
+      <Section title="Recipient">
+        <PasteAddress country={rec.country} onParsed={({ address }) => onChange({ id: rec.id, uri: rec.uri, group: rec.group, note: rec.note, ...address })} />
         <Field label="Country" hint={rec.country === useStore.getState().org?.address.country ? 'Domestic: no country line' : 'Country line added in the label language'}>
           <select className="select" value={rec.country} onChange={(e) => set({ country: e.target.value, postalCode: normalizePostcode(e.target.value, rec.postalCode) })}>
             {countryOptions.map((c) => (
@@ -184,6 +254,7 @@ export function AddressEditor({ rec, options, edited, onChange, setOption }: Edi
             <TextInput value={rec.region} onChange={(v) => set({ region: v.toUpperCase() || undefined })} placeholder={rec.country === 'US' ? 'NY' : rec.country === 'CA' ? 'QC' : ''} />
           </Field>
         )}
+        <GroupField label="Group" value={rec.group} entityKind="address" read={groupOf.contact} onChange={(v) => set({ group: v })} />
       </Section>
       <Section title="Layout">
         <Toggle checked={options.showSender} onChange={(v) => setOption('showSender', v)} label="Return address" hint="Your address in one line above the recipient" />
@@ -205,42 +276,52 @@ export function AddressEditor({ rec, options, edited, onChange, setOption }: Edi
 
 /* ───────── asset ───────── */
 
-export function AssetEditor({ rec, options, setOption, now }: EditorProps<InventoryItem, AssetOptions>) {
+export function AssetEditor({ rec, options, onChange, setOption }: EditorProps<InventoryItem, AssetOptions>) {
   const org = useStore((s) => s.org);
+  const set = (patch: Partial<InventoryItem>) => onChange({ ...rec, ...patch });
+  const opens = options.symbology === 'qr' && rec.uri ? rec.uri : rec.assetTag || '—';
   return (
     <>
-      <Section title="Asset" aside="Read-only, from inventory">
-        <div className="record-card">
-          <div className="head">
-            <span className="linked">
-              <Icon.link /> Linked · changed {relativeTime(rec.updatedAt, now.getTime())}
-            </span>
-            <span className="num">{rec.assetTag}</span>
-          </div>
-          <dl>
-            <dt>Name</dt>
-            <dd>{rec.name}</dd>
-            {rec.model && (
-              <>
-                <dt>Model</dt>
-                <dd>{rec.model}</dd>
-              </>
-            )}
-            <dt>Serial</dt>
-            <dd className="num">{rec.serial ?? '—'}</dd>
-            <dt>Location</dt>
-            <dd>{rec.location}</dd>
-            <dt>Assigned to</dt>
-            <dd>{rec.owner ?? 'Pool'}</dd>
-            <dt>Code opens</dt>
-            <dd className="num" style={{ fontSize: 12 }}>
-              {options.symbology === 'qr' ? `${org?.inventoryUrl}${rec.assetTag}` : rec.assetTag}
-            </dd>
-          </dl>
+      <Section title="Asset">
+        <div className="row">
+          <Field label="Asset tag">
+            <TextInput className="input num" value={rec.assetTag} onChange={(v) => set({ assetTag: v.toUpperCase() })} placeholder="NL-000000" spellCheck={false} />
+          </Field>
+          <GroupField label="Category" value={rec.category} entityKind="asset" read={groupOf.asset} onChange={(v) => set({ category: v })} />
+        </div>
+        <Field label="Name">
+          <TextInput value={rec.name} onChange={(v) => set({ name: v })} />
+        </Field>
+        <div className="row">
+          <Field label="Model">
+            <TextInput value={rec.model} onChange={(v) => set({ model: v || undefined })} />
+          </Field>
+          <Field label="Serial number">
+            <TextInput className="input num" value={rec.serial} onChange={(v) => set({ serial: v || undefined })} spellCheck={false} />
+          </Field>
+        </div>
+        <Field label="Location">
+          <TextInput value={rec.location} onChange={(v) => set({ location: v })} placeholder="Studio · Desk 4" />
+        </Field>
+        <div className="row">
+          <Field label="Assigned to">
+            <TextInput value={rec.owner} onChange={(v) => set({ owner: v || undefined })} placeholder="Pool" />
+          </Field>
+          <Field label="Purchased">
+            <input className="input" type="date" value={rec.purchased ?? ''} onChange={(e) => set({ purchased: e.target.value || undefined })} />
+          </Field>
         </div>
       </Section>
       <Section title="Layout">
-        <Field label="Code" hint={options.symbology === 'qr' ? 'Any phone camera opens the inventory record' : 'Smaller for the same data; needs a scanner app'}>
+        <Field
+          label="Code"
+          hint={
+            <>
+              {options.symbology === 'qr' ? 'Any phone camera opens it: ' : 'Holds the tag; needs a scanner app: '}
+              <span className="num">{opens}</span>
+            </>
+          }
+        >
           <Segmented
             block
             label="Code"
@@ -268,24 +349,51 @@ export function AssetEditor({ rec, options, setOption, now }: EditorProps<Invent
 
 /* ───────── location ───────── */
 
-export function LocationEditor({ rec, options, setOption }: EditorProps<StorageLocation, LocationOptions>) {
+const ARROWS = { down: 'Shelf below the label', up: 'Shelf above the label', left: 'To the left', right: 'To the right' } as const;
+
+export function LocationEditor({ rec, options, onChange, setOption }: EditorProps<StorageLocation, LocationOptions>) {
+  const set = (patch: Partial<StorageLocation>) => onChange({ ...rec, ...patch });
+  const setSegment = (i: number, patch: Partial<StorageLocation['segments'][number]>) => set({ segments: rec.segments.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
   return (
     <>
-      <Section title="Location" aside="Read-only, from warehouse">
-        <div className="record-card">
-          <div className="head">
-            <span>{rec.area}</span>
-            <span className="num">{locationCode(rec)}</span>
-          </div>
-          <dl>
-            {rec.segments.map((s) => (
-              <FragmentRow key={s.label} k={s.label[0].toUpperCase() + s.label.slice(1)} v={s.value} />
+      <Section title="Location" aside={<span className="num">{locationCode(rec) || '—'}</span>}>
+        <div className="field">
+          <span>Code, from coarse to fine</span>
+          <div className="segments">
+            {rec.segments.map((seg, i) => (
+              <div className="segment" key={i}>
+                <input className="input" value={seg.label} aria-label={`Level ${i + 1} name`} onChange={(e) => setSegment(i, { label: e.target.value.toLowerCase() })} />
+                <input className="input num" value={seg.value} aria-label={`Level ${i + 1} value`} onChange={(e) => setSegment(i, { value: e.target.value.toUpperCase().replace(/\s+/g, '') })} />
+                <button className="btn icon ghost" aria-label={`Remove ${seg.label || 'level'}`} disabled={rec.segments.length < 2} onClick={() => set({ segments: rec.segments.filter((_, j) => j !== i) })}>
+                  <Icon.close />
+                </button>
+              </div>
             ))}
-            <dt>Contents</dt>
-            <dd>{rec.contents}</dd>
-            <dt>Direction</dt>
-            <dd>{rec.arrow ? { up: 'Shelf above the label', down: 'Shelf below the label', left: 'To the left', right: 'To the right' }[rec.arrow] : 'Not set'}</dd>
-          </dl>
+          </div>
+          {rec.segments.length < 4 && (
+            <button className="btn ghost small" style={{ justifySelf: 'start' }} onClick={() => set({ segments: [...rec.segments, { label: ['aisle', 'rack', 'shelf', 'bin'][rec.segments.length], value: '' }] })}>
+              <Icon.plus /> Add a level
+            </button>
+          )}
+        </div>
+        <GroupField label="Area" value={rec.area} entityKind="location" read={groupOf.location} onChange={(v) => set({ area: v })} />
+        <Field label="Contents">
+          <TextInput value={rec.contents} onChange={(v) => set({ contents: v })} />
+        </Field>
+        <div className="row">
+          <Field label="Article or standard">
+            <TextInput value={rec.sku} onChange={(v) => set({ sku: v || undefined })} placeholder="DIN 7991" />
+          </Field>
+          <Field label="Direction">
+            <select className="select" value={rec.arrow ?? ''} onChange={(e) => set({ arrow: (e.target.value || undefined) as StorageLocation['arrow'] })}>
+              <option value="">None</option>
+              {Object.entries(ARROWS).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
       </Section>
       <Section title="Layout">
@@ -297,15 +405,6 @@ export function LocationEditor({ rec, options, setOption }: EditorProps<StorageL
   );
 }
 
-function FragmentRow({ k, v }: { k: string; v: string }) {
-  return (
-    <>
-      <dt>{k}</dt>
-      <dd className="num">{v}</dd>
-    </>
-  );
-}
-
 /* ───────── food ───────── */
 
 const toLocalInput = (d: Date) => {
@@ -313,31 +412,63 @@ const toLocalInput = (d: Date) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-export function FoodEditor({ rec, options, setOption, now }: EditorProps<FoodProduct, FoodOptions>) {
+function ShelfLife({ hours, onChange }: { hours: number; onChange(h: number): void }) {
+  const [unit, setUnit] = useState<1 | 24>(hours >= 24 && hours % 24 === 0 ? 24 : 1);
+  return (
+    <Field label="Shelf life">
+      <div className="uri">
+        <input className="input num" type="number" min={1} value={Math.round((hours / unit) * 10) / 10} onChange={(e) => onChange(Math.max(1, Math.round(Number(e.target.value) * unit)))} />
+        <select className="select" style={{ width: 'auto' }} value={unit} aria-label="Unit" onChange={(e) => setUnit(Number(e.target.value) as 1 | 24)}>
+          <option value={1}>hours</option>
+          <option value={24}>days</option>
+        </select>
+      </div>
+    </Field>
+  );
+}
+
+export function FoodEditor({ rec, options, onChange, setOption, now }: EditorProps<FoodProduct, FoodOptions>) {
   const locale = useStore((s) => s.locale);
+  const set = (patch: Partial<FoodProduct>) => onChange({ ...rec, ...patch });
   const { until } = useBy(rec, options, now);
-  const hours = rec.shelfLifeHours;
-  const life = hours < 24 ? `${hours} hours` : hours < 24 * 60 ? `${Math.round(hours / 24)} days` : `${Math.round(hours / 24 / 30)} months`;
   const untilText = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(until);
   const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
   const diffH = (until.getTime() - now.getTime()) / 3600_000;
   const rel = Math.abs(diffH) < 48 ? rtf.format(Math.round(diffH), 'hour') : rtf.format(Math.round(diffH / 24), 'day');
+  const toggleAllergen = (a: AllergenCode) => set({ allergens: rec.allergens.includes(a) ? rec.allergens.filter((x) => x !== a) : (Object.keys(ALLERGENS) as AllergenCode[]).filter((x) => x === a || rec.allergens.includes(x)) });
   return (
     <>
-      <Section title="Product" aside="From recipes">
-        <div className="record-card">
-          <div className="head">
-            <span>{rec.category}</span>
-            <span>{{ chilled: 'Chilled', frozen: 'Frozen', ambient: 'Ambient' }[rec.storage]}</span>
+      <Section title="Recipe">
+        <Field label="Name" hint="As it should appear on the label">
+          <TextInput value={rec.name} onChange={(v) => set({ name: v })} />
+        </Field>
+        <div className="row">
+          <GroupField label="Category" value={rec.category} entityKind="food" read={groupOf.food} onChange={(v) => set({ category: v })} />
+          <ShelfLife key={rec.id} hours={rec.shelfLifeHours} onChange={(h) => set({ shelfLifeHours: h })} />
+        </div>
+        <Field label="Storage">
+          <Segmented
+            block
+            label="Storage"
+            value={rec.storage}
+            onChange={(v) => set({ storage: v })}
+            options={[
+              { value: 'chilled', label: 'Chilled' },
+              { value: 'frozen', label: 'Frozen' },
+              { value: 'ambient', label: 'Ambient' },
+            ]}
+          />
+        </Field>
+        <div className="field">
+          <span>Allergens</span>
+          <div className="chips">
+            {(Object.keys(ALLERGENS) as AllergenCode[]).map((a) => (
+              <button key={a} className="chip" aria-pressed={rec.allergens.includes(a)} onClick={() => toggleAllergen(a)}>
+                <span className="num" style={{ opacity: 0.6, marginRight: 4 }}>{a}</span>
+                {ALLERGENS[a][locale]}
+              </button>
+            ))}
           </div>
-          <dl>
-            <dt>Name</dt>
-            <dd>{rec.name}</dd>
-            <dt>Shelf life</dt>
-            <dd>{life}</dd>
-            <dt>Allergens</dt>
-            <dd>{rec.allergens.length ? rec.allergens.map((a) => `${a} ${ALLERGENS[a][locale]}`).join(', ') : 'None declared'}</dd>
-          </dl>
         </div>
       </Section>
       <Section title="This batch">
@@ -363,20 +494,10 @@ export function FoodEditor({ rec, options, setOption, now }: EditorProps<FoodPro
 
 /* ───────── text ───────── */
 
-export function TextEditor({ rec, options, onChange, setOption, edited }: EditorProps<TextNote, TextOptions>) {
-  const removeDraft = useStore((s) => s.removeDraft);
+export function TextEditor({ rec, options, onChange, setOption }: EditorProps<Sign, TextOptions>) {
   return (
     <>
-      <Section
-        title="Text"
-        aside={
-          edited ? (
-            <button className="btn ghost small" onClick={() => removeDraft(rec.id)}>
-              {rec.id.startsWith('local-') ? 'Delete' : 'Revert'}
-            </button>
-          ) : undefined
-        }
-      >
+      <Section title="Text">
         <Field label="Heading" hint="Quotes, dashes and units are typeset for you. Return forces a line break.">
           <textarea className="input" rows={2} value={rec.title} onChange={(e) => onChange({ ...rec, title: e.target.value })} />
         </Field>

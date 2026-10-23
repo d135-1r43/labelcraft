@@ -242,7 +242,6 @@ export function Stage({ items, activeIndex }: { items: BatchItem[]; activeIndex:
   const setStore = useStore((s) => s.set);
   const setActive = useStore((s) => s.setActive);
   const ks = useKindState();
-  const loading = useStore((s) => s.loading[s.kindId]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState<{ h: Hover; raster: HTMLCanvasElement } | null>(null);
@@ -317,7 +316,7 @@ export function Stage({ items, activeIndex }: { items: BatchItem[]; activeIndex:
       <div className="roll-viewport" ref={viewportRef}>
         {items.length === 0 ? (
           <div className="empty" style={{ margin: 'auto' }}>
-            {loading ? 'Loading records…' : 'Choose a record on the left to put it on a label.'}
+            Choose a record on the left, or add one, to put it on a label.
           </div>
         ) : (
           <div className={`roll${vertical ? ' vertical' : ''}`}>

@@ -6,9 +6,10 @@ import { MAX_CONTINUOUS_MM, MEDIA, MIN_CONTINUOUS_MM, mediaById } from '../engin
 import { kindById } from '../kinds';
 import type { Rec } from '../kinds/types';
 import { downloadPng, printBatch } from '../state/print';
-import { recordsOf, useKindState, useStore } from '../state/store';
+import { useKindState, useRecords, useStore } from '../state/store';
+import { entityById } from '../db/entities';
 import { Field, Section } from './controls';
-import { EDITORS } from './editors';
+import { EDITORS, LeadingRecord } from './editors';
 import { Icon } from './icons';
 import type { BatchItem } from './Stage';
 
@@ -137,9 +138,8 @@ function TypeSystems() {
 export function Inspector({ items, activeIndex, activeRec, now }: { items: BatchItem[]; activeIndex: number; activeRec: Rec | null; now: Date }) {
   const kindId = useStore((s) => s.kindId);
   const ks = useKindState();
-  const drafts = useStore((s) => s.drafts);
-  const records = useStore((s) => s.records);
-  const saveDraft = useStore((s) => s.saveDraft);
+  const records = useRecords(kindId);
+  const saveRecord = useStore((s) => s.saveRecord);
   const setOption = useStore((s) => s.setOption);
   const setActive = useStore((s) => s.setActive);
   const printers = useStore((s) => s.printers);
@@ -168,7 +168,7 @@ export function Inspector({ items, activeIndex, activeRec, now }: { items: Batch
     }
     setConfirming(false);
     setBusy(true);
-    const recs = ks.selection.map((id) => recordsOf({ records, drafts }, kindId).find((r) => r.id === id)).filter(Boolean) as Rec[];
+    const recs = ks.selection.map((id) => records.find((r) => r.id === id)).filter(Boolean) as Rec[];
     try {
       await printBatch({ kindId, recs, ks, locale, org, printer, copies, now: new Date() });
     } finally {
@@ -180,17 +180,13 @@ export function Inspector({ items, activeIndex, activeRec, now }: { items: Batch
     <aside className="inspector" aria-label="Label settings">
       <div className="scroll">
         {activeRec && Editor ? (
-          <Editor
-            rec={activeRec as never}
-            options={ks.options as never}
-            edited={!!drafts[kindId]?.[activeRec.id]}
-            onChange={(r: Rec) => saveDraft(r)}
-            setOption={(k: string, v: unknown) => setOption(k, v)}
-            now={now}
-          />
+          <>
+            <LeadingRecord key={activeRec.id} rec={activeRec} onChange={saveRecord} now={now} />
+            <Editor rec={activeRec as never} options={ks.options as never} onChange={(r: Rec) => saveRecord(r)} setOption={(k: string, v: unknown) => setOption(k, v)} now={now} />
+          </>
         ) : (
           <Section title={def.name}>
-            <div style={{ color: 'var(--ink-3)' }}>Pick a {def.source.noun} on the left.</div>
+            <div style={{ color: 'var(--ink-3)' }}>Pick {/^[aeiou]/.test(entityById(def.entity).noun) ? 'an' : 'a'} {entityById(def.entity).noun} on the left, or add one.</div>
           </Section>
         )}
         <LabelSetup preferredLength={active?.composed.layout.preferredLengthMm} />

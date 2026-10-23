@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
+import { entityById, hostOf } from '../db/entities';
 import { KINDS, kindById } from '../kinds';
 import type { KindId } from '../kinds/types';
-import { recordsOf, useKindState, useStore } from '../state/store';
-import { relativeTime } from './controls';
+import { enabledKinds, useKindState, useRecords, useStore } from '../state/store';
 import { Icon } from './icons';
 
 export function KindRail() {
   const kindId = useStore((s) => s.kindId);
   const setKind = useStore((s) => s.setKind);
+  const entities = useStore((s) => s.entities);
+  const enabled = enabledKinds(entities);
   return (
     <nav className="rail" aria-label="Label types">
-      {KINDS.map((k) => {
+      {KINDS.filter((k) => enabled.includes(k.id)).map((k) => {
         const I = Icon[k.id as KindId];
         return (
           <button key={k.id} aria-current={k.id === kindId ? 'page' : undefined} onClick={() => setKind(k.id)} title={`${k.name}: ${k.tagline}`}>
@@ -25,12 +27,10 @@ export function KindRail() {
 
 export function SourcePanel() {
   const kindId = useStore((s) => s.kindId);
-  const def = kindById(kindId);
-  const records = useStore((s) => s.records);
-  const drafts = useStore((s) => s.drafts);
-  const loading = useStore((s) => s.loading[kindId]);
-  const syncedAt = useStore((s) => s.syncedAt[kindId]);
-  const load = useStore((s) => s.load);
+  const entity = entityById(kindById(kindId).entity);
+  const prefs = useStore((s) => s.entities[entity.id]);
+  const all = useRecords(kindId);
+  const set = useStore((s) => s.set);
   const toggleSelected = useStore((s) => s.toggleSelected);
   const setActive = useStore((s) => s.setActive);
   const setSelection = useStore((s) => s.setSelection);
@@ -38,43 +38,46 @@ export function SourcePanel() {
   const ks = useKindState();
   const [query, setQuery] = useState('');
 
-  const all = useMemo(() => recordsOf({ records, drafts }, kindId), [records, drafts, kindId]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return all;
-    return all.filter((r) => `${def.source.title(r)} ${def.source.subtitle(r)} ${def.source.group?.(r) ?? ''}`.toLowerCase().includes(q));
-  }, [all, query, def]);
+    return all.filter((r) => `${entity.title(r)} ${entity.subtitle(r)} ${entity.group(r) ?? ''}`.toLowerCase().includes(q));
+  }, [all, query, entity]);
   const groups = useMemo(() => {
     const map = new Map<string, typeof filtered>();
     for (const r of filtered) {
-      const g = def.source.group?.(r) ?? '';
+      const g = entity.group(r) ?? '';
       map.set(g, [...(map.get(g) ?? []), r]);
     }
     return [...map.entries()];
-  }, [filtered, def]);
+  }, [filtered, entity]);
 
   const selected = new Set(ks.selection);
+  const unlinked = all.filter((r) => !r.uri).length;
   const allFilteredSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.id));
 
   return (
-    <aside className="source" aria-label={def.source.name}>
+    <aside className="source" aria-label={entity.name}>
       <header>
         <h2>
-          {def.source.name}
-          <small>{all.length ? `${all.length} ${all.length === 1 ? def.source.noun : def.source.noun + (def.source.noun.endsWith('s') ? 'es' : 's')}` : ''}</small>
+          {entity.name}
+          <small>{all.length ? `${all.length} ${all.length === 1 ? entity.noun : entity.plural}` : ''}</small>
         </h2>
-        {!def.source.editable && (
-          <div className="sync">
-            <span className="dot" />
-            {loading ? 'Syncing…' : syncedAt ? `Live from ${def.source.name.toLowerCase()} · synced ${relativeTime(syncedAt)}` : ''}
-            <button className="btn ghost small" style={{ marginLeft: 'auto' }} onClick={() => load(kindId, true)} disabled={loading}>
-              Refresh
-            </button>
-          </div>
-        )}
+        <button className="leading" onClick={() => set('prefsOpen', true)} title="Change in Preferences">
+          <Icon.link />
+          {prefs.baseUrl ? (
+            <span>
+              Leads: <b>{prefs.name || hostOf(prefs.baseUrl)}</b>
+              {prefs.name && hostOf(prefs.baseUrl) ? <> · {hostOf(prefs.baseUrl)}</> : null}
+              {unlinked > 0 && <em> · {unlinked} not linked</em>}
+            </span>
+          ) : (
+            <span>Kept in Labelcraft only</span>
+          )}
+        </button>
         <div className="search">
           <Icon.search />
-          <input className="input" placeholder={`Search ${def.source.name.toLowerCase()}`} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={`Search ${def.source.name}`} />
+          <input className="input" placeholder={`Search ${entity.name.toLowerCase()}`} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={`Search ${entity.name}`} />
         </div>
         <div className="batchbar">
           <span>
@@ -88,8 +91,7 @@ export function SourcePanel() {
         </div>
       </header>
       <div className="list" role="list">
-        {loading && !all.length && [0, 1, 2, 3, 4].map((i) => <div className="skeleton" key={i} />)}
-        {!loading && filtered.length === 0 && <div className="empty">{query ? `Nothing matches “${query}”.` : `No ${def.source.noun}s yet.`}</div>}
+        {filtered.length === 0 && <div className="empty">{query ? `Nothing matches “${query}”.` : `No ${entity.plural} yet. Add the first one below.`}</div>}
         {groups.map(([group, recs]) => (
           <div key={group || '_'}>
             {group && <div className="group">{group}</div>}
@@ -101,25 +103,26 @@ export function SourcePanel() {
                   checked={selected.has(r.id)}
                   onClick={(e) => e.stopPropagation()}
                   onChange={() => toggleSelected(r.id)}
-                  aria-label={`Include ${def.source.title(r)} in batch`}
+                  aria-label={`Include ${entity.title(r)} in batch`}
                 />
                 <div style={{ minWidth: 0 }}>
-                  <div className="title">{def.source.title(r)}</div>
-                  <div className="sub">{def.source.subtitle(r) || ' '}</div>
+                  <div className="title">
+                    {entity.title(r)}
+                    {prefs.baseUrl && !r.uri && <span className="unlinked" title={`Not linked to ${prefs.name || 'the leading system'}`} />}
+                  </div>
+                  <div className="sub">{entity.subtitle(r) || ' '}</div>
                 </div>
               </div>
             ))}
           </div>
         ))}
       </div>
-      {def.source.editable && (
-        <footer>
-          <button className="btn" style={{ flex: 1 }} onClick={createRecord}>
-            <Icon.plus />
-            New {def.source.noun}
-          </button>
-        </footer>
-      )}
+      <footer>
+        <button className="btn" style={{ flex: 1 }} onClick={createRecord}>
+          <Icon.plus />
+          New {entity.noun}
+        </button>
+      </footer>
     </aside>
   );
 }

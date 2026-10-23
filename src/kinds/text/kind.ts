@@ -3,13 +3,8 @@ import type { DrawOp, Issue } from '../../engine/display';
 import { fitText, measure, sizeForCapHeight, type TextStyle } from '../../engine/text';
 import { typeset } from '../../engine/typeset';
 import { ptToMm, snapMm } from '../../engine/units';
+import type { Sign } from '../../db/types';
 import type { KindDef } from '../types';
-
-export interface TextNote {
-  id: string;
-  title: string;
-  subtitle: string;
-}
 
 export interface TextOptions {
   align: 'left' | 'center';
@@ -18,14 +13,7 @@ export interface TextOptions {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-const SAMPLES: TextNote[] = [
-  { id: 't1', title: 'Vorsicht, zerbrechlich', subtitle: 'Bitte nicht werfen -- Inhalt: Glas' },
-  { id: 't2', title: 'Serverraum 2.14', subtitle: 'Zutritt nur für "IT-Betrieb"' },
-  { id: 't3', title: 'Do not switch off', subtitle: "Backup runs nightly, 02:00-04:30" },
-  { id: 't4', title: 'Donaudampfschifffahrtskapitänsmütze', subtitle: 'Hyphenation test' },
-];
-
-export const textKind: KindDef<TextNote, TextOptions> = {
+export const textKind: KindDef<Sign, TextOptions> = {
   id: 'text',
   name: 'Sign',
   tagline: 'Free text, set with optimal line breaks',
@@ -33,15 +21,7 @@ export const textKind: KindDef<TextNote, TextOptions> = {
   media: ['DK-22205', 'DK-22251', 'DK-22210', 'DK-11202', 'DK-22212'],
   defaultTypeSystem: 'plex',
   defaultOptions: { align: 'left', caps: false },
-  source: {
-    name: 'Signs',
-    noun: 'sign',
-    load: async () => SAMPLES,
-    title: (t) => t.title || 'Untitled sign',
-    subtitle: (t) => t.subtitle,
-    editable: true,
-    create: () => ({ id: `local-${Date.now().toString(36)}`, title: '', subtitle: '' }),
-  },
+  entity: 'signs',
 
   layout(note, o, { m, frame, ts, locale }) {
     const ops: DrawOp[] = [];

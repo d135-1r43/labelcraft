@@ -5,6 +5,8 @@ import type { LabelcraftApi, Organisation, PrintJob, Printer } from '../api/type
 import { landscapeReadAlong } from '../engine/frame';
 import { mediaById } from '../engine/media';
 import type { TypeLocale } from '../engine/typeset';
+import { defaultEntityPrefs, entityById, type EntityId, type EntityPrefs } from '../db/entities';
+import { useDb } from '../db/store';
 import { KINDS, kindById } from '../kinds';
 import type { KindId, Rec } from '../kinds/types';
 
@@ -34,13 +36,12 @@ interface Store {
   loupe: boolean;
   zoom: number | 'fit';
 
+  /** Which entities are switched on, and where each one's leading records live. */
+  entities: Record<EntityId, EntityPrefs>;
+  prefsOpen: boolean;
+
   org: Organisation | null;
   printers: Printer[];
-  records: Partial<Record<KindId, Rec[]>>;
-  loading: Partial<Record<KindId, boolean>>;
-  syncedAt: Partial<Record<KindId, number>>;
-  /** Records created or edited in Labelcraft, by kind and id. */
-  drafts: Partial<Record<KindId, Record<string, Rec>>>;
   jobs: PrintJob[];
 
   setKind(id: KindId): void;
@@ -50,11 +51,11 @@ interface Store {
   setActive(id: string): void;
   toggleSelected(id: string): void;
   setSelection(ids: string[]): void;
-  saveDraft(rec: Rec): void;
+  saveRecord(rec: Rec): void;
   createRecord(): void;
-  removeDraft(id: string): void;
+  deleteRecord(id: string): void;
+  setEntity(id: EntityId, patch: Partial<EntityPrefs>): void;
   set<K extends keyof Store>(key: K, value: Store[K]): void;
-  load(kind: KindId, force?: boolean): Promise<void>;
   boot(): Promise<void>;
   refreshPrinters(): Promise<void>;
   upsertJob(job: PrintJob): void;
@@ -93,17 +94,15 @@ export const useStore = create<Store>()(
         guides: true,
         loupe: true,
         zoom: 'fit',
+        entities: defaultEntityPrefs(),
+        prefsOpen: false,
         org: null,
         printers: [],
-        records: {},
-        loading: {},
-        syncedAt: {},
-        drafts: {},
         jobs: [],
 
         setKind(id) {
           set({ kindId: id });
-          void get().load(id);
+          ensureActive(id);
         },
         patchKind(patch) {
           patchCurrent(() => patch);
@@ -130,50 +129,44 @@ export const useStore = create<Store>()(
         setSelection(ids) {
           patchCurrent((k) => ({ selection: ids, activeId: ids.includes(k.activeId ?? '') ? k.activeId : (ids[0] ?? null) }));
         },
-        saveDraft(rec) {
-          const kind = get().kindId;
-          set((s) => ({ drafts: { ...s.drafts, [kind]: { ...(s.drafts[kind] ?? {}), [rec.id]: rec } } }));
+        saveRecord(rec) {
+          useDb.getState().put(kindById(get().kindId).entity, rec);
         },
         createRecord() {
-          const def = kindById(get().kindId);
-          const rec = def.source.create?.();
-          if (!rec) return;
-          get().saveDraft(rec);
+          const rec = useDb.getState().create(kindById(get().kindId).entity);
           get().setActive(rec.id);
         },
-        removeDraft(id) {
-          const kind = get().kindId;
+        deleteRecord(id) {
+          const entity = kindById(get().kindId).entity;
+          useDb.getState().remove(entity, id);
+          // Take it out of every batch that prints this entity.
           set((s) => {
-            const d = { ...(s.drafts[kind] ?? {}) };
-            delete d[id];
-            return { drafts: { ...s.drafts, [kind]: d } };
+            const kinds = { ...s.kinds };
+            for (const k of entityById(entity).kinds) {
+              const selection = kinds[k].selection.filter((x) => x !== id);
+              kinds[k] = { ...kinds[k], selection, activeId: kinds[k].activeId === id ? (selection[0] ?? null) : kinds[k].activeId };
+            }
+            return { kinds };
           });
-          const k = get().kinds[kind];
-          const isLocal = id.startsWith('local-');
-          if (isLocal && k.selection.includes(id)) get().toggleSelected(id);
+        },
+        setEntity(id, patch) {
+          set((s) => ({ entities: { ...s.entities, [id]: { ...s.entities[id], ...patch } } }));
+          // Never leave the person on a label whose data was just switched off.
+          const s = get();
+          if (!s.entities[kindById(s.kindId).entity].enabled) {
+            const next = enabledKinds(s.entities)[0];
+            if (next) s.setKind(next);
+          }
         },
         set(key, value) {
           set({ [key]: value } as Partial<Store>);
         },
-        async load(kind, force) {
-          if (!force && (get().records[kind] || get().loading[kind])) return;
-          set((s) => ({ loading: { ...s.loading, [kind]: true } }));
-          const recs = await kindById(kind).source.load(api);
-          set((s) => ({
-            records: { ...s.records, [kind]: recs },
-            loading: { ...s.loading, [kind]: false },
-            syncedAt: { ...s.syncedAt, [kind]: Date.now() },
-          }));
-          // First visit: start with something on the label.
-          const ks = get().kinds[kind];
-          if (!ks.activeId && recs[0]) {
-            set((s) => ({ kinds: { ...s.kinds, [kind]: { ...s.kinds[kind], activeId: recs[0].id, selection: [recs[0].id] } } }));
-          }
-        },
         async boot() {
           const [org, printers] = await Promise.all([api.organisation(), api.printers()]);
           set({ org, printers });
-          await get().load(get().kindId);
+          const kinds = enabledKinds(get().entities);
+          if (!kinds.includes(get().kindId) && kinds[0]) set({ kindId: kinds[0] });
+          ensureActive(get().kindId);
         },
         async refreshPrinters() {
           set({ printers: await api.printers() });
@@ -188,8 +181,13 @@ export const useStore = create<Store>()(
     },
     {
       name: 'labelcraft',
-      version: 1,
-      partialize: (s) => ({ kindId: s.kindId, kinds: s.kinds, locale: s.locale, printerId: s.printerId, view: s.view, guides: s.guides, loupe: s.loupe, drafts: s.drafts }),
+      version: 2,
+      partialize: (s) => ({ kindId: s.kindId, kinds: s.kinds, locale: s.locale, printerId: s.printerId, view: s.view, guides: s.guides, loupe: s.loupe, entities: s.entities }),
+      // Version 1 kept edits as drafts over records loaded from the API; the database now holds them.
+      migrate: (persisted) => {
+        const { drafts: _drafts, ...rest } = (persisted ?? {}) as Record<string, unknown>;
+        return rest;
+      },
       merge: (persisted, current) => {
         const p = persisted as Partial<Store>;
         // New option keys added after a release must still get their defaults.
@@ -198,18 +196,29 @@ export const useStore = create<Store>()(
           const saved = p.kinds?.[k.id];
           if (saved) kinds[k.id] = { ...current.kinds[k.id], ...saved, options: { ...k.defaultOptions, ...saved.options } };
         }
-        return { ...current, ...p, kinds };
+        const entities = { ...current.entities };
+        for (const [id, prefs] of Object.entries(p.entities ?? {})) if (id in entities) entities[id as EntityId] = { ...entities[id as EntityId], ...prefs };
+        return { ...current, ...p, kinds, entities };
       },
     },
   ),
 );
 
-/** Records of a kind: the source's records with local edits applied, plus records created here. */
-export function recordsOf(s: Pick<Store, 'records' | 'drafts'>, kind: KindId): Rec[] {
-  const base = s.records[kind] ?? [];
-  const drafts = s.drafts[kind] ?? {};
-  const ids = new Set(base.map((r) => r.id));
-  return [...base.map((r) => drafts[r.id] ?? r), ...Object.values(drafts).filter((d) => !ids.has(d.id))];
+/** The kinds whose entity is switched on, in rail order. */
+export const enabledKinds = (entities: Record<EntityId, EntityPrefs>) => KINDS.filter((k) => entities[k.entity].enabled).map((k) => k.id);
+
+/** The records a kind prints, straight from the database. */
+export const useRecords = (kind: KindId) => useDb((d) => d.collections[kindById(kind).entity]);
+
+/** First visit to a kind: start with something on the label. */
+function ensureActive(kind: KindId) {
+  const s = useStore.getState();
+  const ks = s.kinds[kind];
+  const recs = useDb.getState().collections[kindById(kind).entity];
+  if (ks.activeId && recs.some((r) => r.id === ks.activeId)) return;
+  const first = recs.find((r) => ks.selection.includes(r.id)) ?? recs[0];
+  if (!first) return;
+  useStore.setState((st) => ({ kinds: { ...st.kinds, [kind]: { ...st.kinds[kind], activeId: first.id, selection: ks.selection.includes(first.id) ? ks.selection : [first.id] } } }));
 }
 
 export const useKindState = () => useStore((s) => s.kinds[s.kindId]);

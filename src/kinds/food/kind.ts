@@ -1,4 +1,4 @@
-import type { AllergenCode, FoodProduct } from '../../api/types';
+import type { AllergenCode, FoodProduct } from '../../db/types';
 import type { DrawOp, Ink, Issue } from '../../engine/display';
 import { fitStack, fitText, type Box, type TextStyle } from '../../engine/text';
 import { NBSP, typeset, type TypeLocale } from '../../engine/typeset';
@@ -114,19 +114,8 @@ export const foodKind: KindDef<FoodProduct, FoodOptions> = {
   media: ['DK-11209', 'DK-22251', 'DK-22205', 'DK-11204', 'DK-11218'],
   defaultTypeSystem: 'atkinson',
   defaultOptions: { preparedAt: null, preparedBy: 'MK', allergens: true },
-  source: {
-    name: 'Recipes',
-    noun: 'product',
-    load: (api) => api.foodProducts(),
-    title: (p) => p.name,
-    subtitle: (p) => {
-      const h = p.shelfLifeHours;
-      const life = h < 24 ? `${h} h` : `${Math.round(h / 24)} days`;
-      return `${life} · ${p.storage}`;
-    },
-    group: (p) => p.category,
-    editable: false,
-  },
+  entity: 'recipes',
+
 
   layout(p, o, env) {
     const { m, frame, ts, locale, now } = env;

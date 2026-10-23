@@ -1,4 +1,4 @@
-import type { InventoryItem } from '../../api/types';
+import type { InventoryItem } from '../../db/types';
 import { placeCode, type Symbology } from '../../engine/barcode';
 import type { DrawOp, Issue, TextOp } from '../../engine/display';
 import { fitText, measure, type Box, type TextStyle } from '../../engine/text';
@@ -43,15 +43,8 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
   media: ['DK-11201', 'DK-11221', 'DK-11204', 'DK-22211', 'DK-11209'],
   defaultTypeSystem: 'plex',
   defaultOptions: { symbology: 'qr', ownerLine: true, detail: 'serial' },
-  source: {
-    name: 'Inventory',
-    noun: 'asset',
-    load: (api) => api.inventory(),
-    title: (i) => i.name,
-    subtitle: (i) => `${i.assetTag} · ${i.location}`,
-    group: (i) => i.category,
-    editable: false,
-  },
+  entity: 'inventory',
+
 
   layout(item, o, env) {
     const { m, frame, ts, locale, org } = env;
@@ -71,7 +64,9 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
     }
     const k = clamp(H / 25.9, 0.55, 2.2);
     const pad = frame.shape === 'round' ? 0.3 : clamp(Math.min(W, H) * 0.075, 1, 3.5);
-    const payload = o.symbology === 'qr' ? `${org.inventoryUrl}${item.assetTag}` : item.assetTag;
+    // The QR code opens the record in the leading system; without a link it can only carry the tag.
+    const payload = o.symbology === 'qr' && item.uri ? item.uri : item.assetTag;
+    if (o.symbology === 'qr' && !item.uri) issues.push({ id: 'asset-unlinked', severity: 'warn', message: 'Not linked to the inventory', detail: 'The QR code holds only the asset tag, so a phone camera cannot open the record. Add the link above.' });
     const aspect = W / H;
 
     if (aspect < 1.6) {

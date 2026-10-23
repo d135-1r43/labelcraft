@@ -1,4 +1,4 @@
-import type { Contact } from '../../api/types';
+import type { Contact } from '../../db/types';
 import type { DrawOp, Issue } from '../../engine/display';
 import { fitStack, fitText, measure, type StackLine, type TextStyle } from '../../engine/text';
 import { typeset } from '../../engine/typeset';
@@ -23,16 +23,8 @@ export const addressKind: KindDef<Contact, AddressOptions> = {
   media: ['DK-11201', 'DK-11208', 'DK-11209', 'DK-11202', 'DK-22205'],
   defaultTypeSystem: 'plex',
   defaultOptions: { showSender: true, emphasiseName: true, endorsement: '' },
-  source: {
-    name: 'Contacts',
-    noun: 'address',
-    load: (api) => api.contacts(),
-    title: (c) => c.company && !c.familyName ? c.company : [c.givenName, c.familyName].filter(Boolean).join(' ') || c.company || 'Untitled address',
-    subtitle: (c) => [c.company && c.familyName ? c.company : '', c.city, c.country].filter(Boolean).join(' · '),
-    group: (c) => c.group,
-    editable: true,
-    create: () => ({ id: `local-${Date.now().toString(36)}`, group: 'Added here', country: 'DE' }),
-  },
+  entity: 'contacts',
+
 
   layout(r, o, { m, frame, ts, locale, org }) {
     const ops: DrawOp[] = [];

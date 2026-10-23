@@ -137,6 +137,9 @@ export function TopBar() {
       />
       <JobsMenu />
       <PrinterMenu />
+      <button className="btn icon ghost" aria-label="Preferences" title="Preferences" onClick={() => set('prefsOpen', true)}>
+        <Icon.gear />
+      </button>
     </header>
   );
 }
