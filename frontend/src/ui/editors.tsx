@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type JSX } from 'react';
 import { entityById, hostOf, isUri, locationCode } from '../db/entities';
 import type { AllergenCode, Box, Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageLocation } from '../db/types';
 import { countryName, normalizePostcode, parseAddress, ruleFor, SUPPORTED_COUNTRIES } from '../kinds/address/address';
