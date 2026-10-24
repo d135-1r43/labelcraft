@@ -37,8 +37,10 @@ export function SourcePanel() {
   const setActive = useStore((s) => s.setActive);
   const setSelection = useStore((s) => s.setSelection);
   const createRecord = useStore((s) => s.createRecord);
+  const deleteRecords = useStore((s) => s.deleteRecords);
   const ks = useKindState();
   const [query, setQuery] = useState('');
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -90,11 +92,23 @@ export function SourcePanel() {
           <span>
             {ks.selection.length <= 1 ? 'Tick several to print a batch' : <><b className="num">{ks.selection.length}</b> in this batch</>}
           </span>
-          {filtered.length > 1 && (
-            <button className="btn ghost small" onClick={() => setSelection(allFilteredSelected ? ks.selection.filter((id) => !filtered.some((r) => r.id === id)) : [...new Set([...ks.selection, ...filtered.map((r) => r.id)])])}>
-              {allFilteredSelected ? 'Clear' : query ? 'Select matches' : 'Select all'}
-            </button>
-          )}
+          <span className="actions">
+            {ks.selection.length > 1 && (
+              <button
+                className={`btn ghost small${confirmingRemove ? ' danger' : ''}`}
+                onClick={() => (confirmingRemove ? deleteRecords(ks.selection) : setConfirmingRemove(true))}
+                onBlur={() => setConfirmingRemove(false)}
+                title={prefs.baseUrl ? `Removes Labeleur's copies. The records in ${prefs.name || hostOf(prefs.baseUrl)} stay.` : undefined}
+              >
+                {confirmingRemove ? `Remove ${ks.selection.length} ${entity.plural}` : 'Remove'}
+              </button>
+            )}
+            {filtered.length > 1 && !confirmingRemove && (
+              <button className="btn ghost small" onClick={() => setSelection(allFilteredSelected ? ks.selection.filter((id) => !filtered.some((r) => r.id === id)) : [...new Set([...ks.selection, ...filtered.map((r) => r.id)])])}>
+                {allFilteredSelected ? 'Clear' : query ? 'Select matches' : 'Select all'}
+              </button>
+            )}
+          </span>
         </div>
       </header>
       <div className="list" role="list">

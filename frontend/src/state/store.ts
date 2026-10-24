@@ -63,7 +63,7 @@ interface Store {
   setSelection(ids: string[]): void;
   saveRecord(rec: Rec): void;
   createRecord(): void;
-  deleteRecord(id: string): void;
+  deleteRecords(ids: string[]): void;
   setEntity(id: EntityId, patch: Partial<EntityPrefs>): void;
   set<K extends keyof Store>(key: K, value: Store[K]): void;
   boot(): Promise<void>;
@@ -151,15 +151,16 @@ export const useStore = create<Store>()(
           const rec = useDb.getState().create(kindById(get().kindId).entity);
           get().setActive(rec.id);
         },
-        deleteRecord(id) {
+        deleteRecords(ids) {
           const entity = kindById(get().kindId).entity;
-          useDb.getState().remove(entity, id);
-          // Take it out of every batch that prints this entity.
+          for (const id of ids) useDb.getState().remove(entity, id);
+          // Take them out of every batch that prints this entity.
           set((s) => {
             const kinds = { ...s.kinds };
             for (const k of entityById(entity).kinds) {
-              const selection = kinds[k].selection.filter((x) => x !== id);
-              kinds[k] = { ...kinds[k], selection, activeId: kinds[k].activeId === id ? (selection[0] ?? null) : kinds[k].activeId };
+              const selection = kinds[k].selection.filter((x) => !ids.includes(x));
+              const activeId = kinds[k].activeId;
+              kinds[k] = { ...kinds[k], selection, activeId: activeId && ids.includes(activeId) ? (selection[0] ?? null) : activeId };
             }
             return { kinds };
           });

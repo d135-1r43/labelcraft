@@ -524,6 +524,15 @@ textarea.input {
   color: var(--ink-2);
 }
 
+.batchbar > span:first-child {
+  white-space: nowrap;
+}
+
+.batchbar .actions {
+  display: flex;
+  gap: 2px;
+}
+
 .list {
   flex: 1;
   overflow-y: auto;

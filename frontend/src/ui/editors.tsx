@@ -28,7 +28,7 @@ export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(
   const kindId = useStore((s) => s.kindId);
   const entity = entityById(kindById(kindId).entity);
   const prefs = useStore((s) => s.entities[entity.id]);
-  const deleteRecord = useStore((s) => s.deleteRecord);
+  const deleteRecords = useStore((s) => s.deleteRecords);
   const [confirming, setConfirming] = useState(false);
   const uri = rec.uri ?? '';
   const system = prefs.name || hostOf(prefs.baseUrl) || 'the leading system';
@@ -53,7 +53,7 @@ export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(
       aside={
         <button
           className={`btn ghost small${confirming ? ' danger' : ''}`}
-          onClick={() => (confirming ? deleteRecord(rec.id) : setConfirming(true))}
+          onClick={() => (confirming ? deleteRecords([rec.id]) : setConfirming(true))}
           onBlur={() => setConfirming(false)}
           title={uri ? `Removes Labeleur's copy. The record in ${system} stays.` : undefined}
         >
