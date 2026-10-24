@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "quarkus-tools": {
+      "source": {
+        "source": "github",
+        "repo": "quarkusio/quarkus-agent-mcp"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "quarkus-agent@quarkus-tools": true,
+    "typescript-lsp@claude-plugins-official": true
+  }
+}
