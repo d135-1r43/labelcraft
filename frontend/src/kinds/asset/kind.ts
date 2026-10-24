@@ -9,8 +9,8 @@ import type { KindDef, LayoutEnv } from '../types';
 
 export interface AssetOptions {
   symbology: Extract<Symbology, 'qr' | 'datamatrix'>;
-  /** What the QR code opens: the record in the inventory system, or in Labelcraft. */
-  qrTarget: 'leading' | 'labelcraft';
+  /** What the QR code opens: the record in the inventory system, or in Labeleur. */
+  qrTarget: 'leading' | 'labeleur';
   ownerLine: boolean;
   logo: boolean;
   detail: 'serial' | 'location' | 'both' | 'none';
@@ -39,16 +39,16 @@ function tagOps(env: LayoutEnv, tag: string, box: Box, maxPt: number, align: 'le
   };
 }
 
-/** The link to this record in Labelcraft itself. */
-export const labelcraftLink = (appUrl: string, item: InventoryItem) => `${appUrl}/r/inventory/${encodeURIComponent(item.id)}`;
+/** The link to this record in Labeleur itself. */
+export const labeleurLink = (appUrl: string, item: InventoryItem) => `${appUrl}/r/inventory/${encodeURIComponent(item.id)}`;
 
 /**
  * What the code holds. A QR code opens the record, in the leading system or
- * in Labelcraft; without a link, and in Data Matrix, it carries only the tag.
+ * in Labeleur; without a link, and in Data Matrix, it carries only the tag.
  */
 export function assetPayload(item: InventoryItem, o: AssetOptions, appUrl: string) {
   if (o.symbology !== 'qr') return item.assetTag;
-  if (o.qrTarget === 'labelcraft') return labelcraftLink(appUrl, item);
+  if (o.qrTarget === 'labeleur') return labeleurLink(appUrl, item);
   return item.uri || item.assetTag;
 }
 
@@ -82,7 +82,7 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
     const k = clamp(H / 25.9, 0.55, 2.2);
     const pad = frame.shape === 'round' ? 0.3 : clamp(Math.min(W, H) * 0.075, 1, 3.5);
     const payload = assetPayload(item, o, env.appUrl);
-    if (o.symbology === 'qr' && o.qrTarget !== 'labelcraft' && !item.uri) issues.push({ id: 'asset-unlinked', severity: 'warn', message: 'Not linked to the inventory', detail: 'The QR code holds only the asset tag, so a phone camera cannot open the record. Add the link above.' });
+    if (o.symbology === 'qr' && o.qrTarget !== 'labeleur' && !item.uri) issues.push({ id: 'asset-unlinked', severity: 'warn', message: 'Not linked to the inventory', detail: 'The QR code holds only the asset tag, so a phone camera cannot open the record. Add the link above.' });
     const aspect = W / H;
 
     if (aspect < 1.6) {

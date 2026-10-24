@@ -1,7 +1,7 @@
 """
 Smoke test for a running stack (app on :8080, Keycloak on :8180):
 create a verified user through Keycloak's admin API, sign in through the
-Labelcraft login page, then read records and print a PDF as that user.
+Labeleur login page, then read records and print a PDF as that user.
 
 Standard library only, so it runs on any CI runner.
 """
@@ -51,7 +51,7 @@ _, _, body, _ = request(plain, f"{KEYCLOAK}/realms/master/protocol/openid-connec
 admin = json.loads(body)["access_token"]
 user = {"username": EMAIL, "email": EMAIL, "emailVerified": True, "enabled": True, "firstName": "Smoke", "lastName": "Test",
         "credentials": [{"type": "password", "value": PASSWORD, "temporary": False}]}
-status, *_ = request(plain, f"{KEYCLOAK}/admin/realms/labelcraft/users", json.dumps(user).encode(),
+status, *_ = request(plain, f"{KEYCLOAK}/admin/realms/labeleur/users", json.dumps(user).encode(),
                      {"Authorization": f"Bearer {admin}", "Content-Type": "application/json"})
 if status != 201: fail(f"creating the user answered {status}")
 
@@ -66,7 +66,7 @@ class LocalhostIsSecure(http.cookiejar.DefaultCookiePolicy):
 browser = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar(LocalhostIsSecure())))
 status, url, page, _ = request(browser, f"{APP}/")
 page = page.decode()
-if "lc-card" not in page: fail(f"{url} is not the Labelcraft login page")
+if "lc-card" not in page: fail(f"{url} is not the Labeleur login page")
 action = re.search(r'id="kc-form-login"[^>]*action="([^"]+)"', page)
 if not action: fail("no login form")
 status, url, page, _ = request(browser, html.unescape(action.group(1)), urllib.parse.urlencode({"username": EMAIL, "password": PASSWORD}).encode())

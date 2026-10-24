@@ -1,7 +1,7 @@
-/** The Labelcraft server (Quarkus), reached on the same origin under /api. */
+/** The Labeleur server (Quarkus), reached on the same origin under /api. */
 import type { DbRecord } from '../db/types';
 import type { EntityId, EntityPrefs } from '../db/entities';
-import type { LabelcraftApi, Organisation, PrintJob } from './types';
+import type { LabeleurApi, Organisation, PrintJob } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -31,7 +31,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
       body: body === undefined ? undefined : body instanceof FormData || body instanceof Blob ? body : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, 'The Labelcraft server cannot be reached.');
+    throw new ApiError(0, 'The Labeleur server cannot be reached.');
   }
   if (res.status === 499 || res.status === 401) sessionEnded();
   if (!res.ok) {
@@ -77,7 +77,7 @@ export const settingsApi = {
   put: (entity: EntityId, prefs: EntityPrefs) => call<EntityPrefs>('PUT', `/settings/entities/${entity}`, prefs),
 };
 
-export const httpApi: LabelcraftApi = {
+export const httpApi: LabeleurApi = {
   organisation: () => call('GET', '/organisation'),
   printers: () => call('GET', '/printers'),
   jobs: () => call('GET', '/print-jobs'),

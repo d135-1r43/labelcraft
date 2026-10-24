@@ -1,5 +1,5 @@
 /**
- * The records Labelcraft keeps, mirrored from the server. Edits apply here
+ * The records Labeleur keeps, mirrored from the server. Edits apply here
  * at once and are saved shortly after the typing stops; each record carries
  * the URI of its original in the leading system.
  */

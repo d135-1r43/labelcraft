@@ -141,7 +141,7 @@ export const Icon = {
   ),
 };
 
-/** The Labelcraft mark: a die-cut label with two set lines. */
+/** The Labeleur mark: a die-cut label with two set lines. */
 export function Mark() {
   return (
     <svg width="26" height="20" viewBox="0 0 26 20" aria-hidden>

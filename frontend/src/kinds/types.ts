@@ -15,7 +15,7 @@ export interface LayoutEnv {
   locale: TypeLocale;
   org: Organisation;
   now: Date;
-  /** Where this Labelcraft is reachable, for codes that link back to it. */
+  /** Where this Labeleur is reachable, for codes that link back to it. */
   appUrl: string;
 }
 

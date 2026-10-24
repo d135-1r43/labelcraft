@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>net.herhoffer.labelcraft</groupId>
-    <artifactId>labelcraft</artifactId>
+    <groupId>net.herhoffer.labeleur</groupId>
+    <artifactId>labeleur</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>quarkus</packaging>
 
     <!-- release:prepare pushes the version commits and the vX.Y.Z tag here. -->
     <scm>
-        <connection>scm:git:https://github.com/d135-1r43/labelcraft.git</connection>
-        <developerConnection>scm:git:git@github.com:d135-1r43/labelcraft.git</developerConnection>
-        <url>https://github.com/d135-1r43/labelcraft</url>
+        <connection>scm:git:https://github.com/d135-1r43/labeleur.git</connection>
+        <developerConnection>scm:git:git@github.com:d135-1r43/labeleur.git</developerConnection>
+        <url>https://github.com/d135-1r43/labeleur</url>
         <tag>HEAD</tag>
     </scm>
 

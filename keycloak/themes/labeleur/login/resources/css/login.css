@@ -1,0 +1,509 @@
+/*
+ * Labeleur sign-in. Same tokens as the app (frontend/src/styles.css):
+ * the card is a die-cut label on its liner, with the printable area's
+ * dashed guide just inside the edge.
+ */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 400;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-sans-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 400;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-sans-latin-ext-400-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 500;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-sans-latin-500-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 500;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-sans-latin-ext-500-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 600;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-sans-latin-600-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 600;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-sans-latin-ext-600-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --desk: #e2e5e9;
+  --liner: #f2f3f5;
+  --paper: #ffffff;
+  --chrome: #f7f8f9;
+  --ink: #15181c;
+  --ink-2: #4b535d;
+  --ink-3: #7c858f;
+  --rule: #dadee3;
+  --rule-strong: #c4cad1;
+  --accent: #1f47d6;
+  --accent-hover: #1838ad;
+  --accent-soft: #e8edfc;
+  --warn: #8f5200;
+  --warn-bg: #fff4dc;
+  --error: #b51d29;
+  --error-bg: #fde9eb;
+  --ok: #1b7343;
+  --ok-bg: #e3f4ea;
+  --radius: 6px;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--desk);
+  color: var(--ink);
+  font: 400 14px/1.5 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ───────── page ───────── */
+
+.lc-login {
+  min-height: 100vh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 22px;
+  padding: 40px 16px 56px;
+}
+
+.lc-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 17px/1 'IBM Plex Sans', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* The liner: a strip the card sits on, as labels sit on their backing tape. */
+.lc-card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 30px 32px 26px;
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow:
+    0 0 0 10px var(--liner),
+    0 0 0 11px rgba(20, 24, 28, 0.06),
+    0 18px 40px -18px rgba(20, 24, 28, 0.35);
+}
+
+/* The printable area's guide, as the stage draws it. */
+.lc-card::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px dashed rgba(31, 71, 214, 0.22);
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+.lc-card-header {
+  margin-bottom: 18px;
+}
+
+#kc-page-title {
+  margin: 0;
+  font: 600 21px/1.25 'IBM Plex Sans', sans-serif;
+  letter-spacing: -0.012em;
+}
+
+.lc-card-header .lc-row {
+  display: grid;
+  gap: 6px;
+}
+
+.lc-card-header .col-md-10 {
+  order: -1;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.required {
+  color: var(--error);
+  margin-left: 2px;
+}
+
+/* Signed-in-as line on later steps. */
+#kc-username {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--chrome);
+}
+
+#kc-attempted-username {
+  font-weight: 500;
+}
+
+.kc-tooltip-text {
+  font-size: 12px;
+}
+
+.lc-icon-restart {
+  display: none;
+}
+
+/* ───────── form ───────── */
+
+form {
+  display: grid;
+  gap: 14px;
+}
+
+.lc-group {
+  display: grid;
+  gap: 5px;
+}
+
+.lc-label-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.lc-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.lc-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font: inherit;
+  color: inherit;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.lc-input:hover {
+  border-color: var(--ink-3);
+}
+
+.lc-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.lc-input[aria-invalid='true'] {
+  border-color: var(--error);
+  background: #fffafa;
+}
+
+.lc-input-group {
+  position: relative;
+}
+
+.lc-input-group .lc-input {
+  padding-right: 42px;
+}
+
+.lc-reveal {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.lc-reveal:hover {
+  background: var(--chrome);
+  color: var(--ink);
+}
+
+.lc-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.lc-icon-show {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.5'%3E%3Cpath d='M1.8 10s3-5.6 8.2-5.6 8.2 5.6 8.2 5.6-3 5.6-8.2 5.6S1.8 10 1.8 10Z'/%3E%3Ccircle cx='10' cy='10' r='2.6'/%3E%3C/svg%3E");
+}
+
+.lc-icon-hide {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M1.8 10s3-5.6 8.2-5.6 8.2 5.6 8.2 5.6-3 5.6-8.2 5.6S1.8 10 1.8 10Z'/%3E%3Ccircle cx='10' cy='10' r='2.6'/%3E%3Cpath d='M3 17 17 3'/%3E%3C/svg%3E");
+}
+
+.lc-error {
+  font-size: 12.5px;
+  color: var(--error);
+}
+
+.lc-help {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.lc-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.checkbox label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.lc-buttons,
+#kc-form-buttons {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.lc-options {
+  font-size: 13px;
+}
+
+.lc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font: 500 14px/1 'IBM Plex Sans', sans-serif;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+
+.lc-btn:hover {
+  background: var(--chrome);
+  border-color: var(--ink-3);
+  text-decoration: none;
+}
+
+.lc-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.lc-btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.lc-btn-block {
+  width: 100%;
+}
+
+/* ───────── messages ───────── */
+
+.lc-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.lc-alert .pf-c-alert__icon {
+  display: none;
+}
+
+.alert-error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.alert-warning {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.alert-success {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+#kc-content-wrapper > p,
+.instruction {
+  margin: 0 0 14px;
+  color: var(--ink-2);
+}
+
+/* ───────── below the form ───────── */
+
+.lc-signup {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+#kc-form-options a,
+.lc-options a {
+  font-size: 13px;
+}
+
+/* Back to login, on the reset and register pages. */
+#kc-form-options {
+  font-size: 13px;
+}
+
+#try-another-way {
+  font-size: 13px;
+}
+
+/* ───────── language ───────── */
+
+.lc-locale {
+  display: flex;
+  justify-content: flex-end;
+  margin: -12px -12px 6px 0;
+}
+
+.lc-locale-dropdown {
+  position: relative;
+}
+
+.lc-locale-dropdown > button {
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font: 500 12px 'IBM Plex Sans', sans-serif;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.lc-locale-dropdown > button:hover {
+  background: var(--chrome);
+  color: var(--ink);
+}
+
+.lc-locale-list {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  display: none;
+  min-width: 140px;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 10px 30px -8px rgba(20, 24, 28, 0.25), 0 0 0 1px rgba(20, 24, 28, 0.06);
+}
+
+.lc-locale-dropdown > button[aria-expanded='true'] + .lc-locale-list {
+  display: block;
+}
+
+.lc-locale-link {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.lc-locale-link:hover {
+  background: var(--chrome);
+  text-decoration: none;
+}
+
+@media (max-width: 480px) {
+  .lc-card {
+    padding: 26px 22px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

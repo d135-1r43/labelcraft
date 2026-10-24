@@ -1,15 +1,15 @@
 import type { Address } from '../kinds/address/address';
 
-/** Every record Labelcraft keeps. The leading system stays the source of truth; `uri` points at the record there. */
+/** Every record Labeleur keeps. The leading system stays the source of truth; `uri` points at the record there. */
 export interface DbRecord {
   id: string;
-  /** The record in its leading system (CRM, inventory, ERP …). Empty when it exists only in Labelcraft. */
+  /** The record in its leading system (CRM, inventory, ERP …). Empty when it exists only in Labeleur. */
   uri?: string;
   updatedAt?: string;
 }
 
 export interface Contact extends DbRecord, Address {
-  /** Free note shown only in Labelcraft, never printed. */
+  /** Free note shown only in Labeleur, never printed. */
   note?: string;
   group: string;
 }

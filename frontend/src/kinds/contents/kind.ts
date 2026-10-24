@@ -13,7 +13,7 @@ export interface ContentsOptions {
   /** The sender's name and address, as the owner. */
   ownerTag: boolean;
   logo: boolean;
-  /** A QR code that opens the box in Labelcraft. */
+  /** A QR code that opens the box in Labeleur. */
   qr: boolean;
 }
 
@@ -23,7 +23,7 @@ const COLUMN_MIN_MM = 24;
 const LIST_COMFORT_PT = 10;
 const LIST_LEADING = 1.32;
 
-/** The link to this box in Labelcraft itself. */
+/** The link to this box in Labeleur itself. */
 export const boxLink = (appUrl: string, box: BoxRecord) => `${appUrl}/r/boxes/${encodeURIComponent(box.id)}`;
 
 /**

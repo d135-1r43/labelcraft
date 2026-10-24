@@ -1,31 +1,31 @@
-# Labelcraft in production: the app, Keycloak and PostgreSQL.
+# Labeleur in production: the app, Keycloak and PostgreSQL.
 # Copy .env.example to .env, fill it in, then `docker compose up -d`.
 #
-# Put a TLS-terminating proxy in front and point LABELCRAFT_URL and
+# Put a TLS-terminating proxy in front and point LABELEUR_URL and
 # KEYCLOAK_URL at the public addresses.
 services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_USER: labelcraft
+      POSTGRES_USER: labeleur
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: labelcraft
+      POSTGRES_DB: labeleur
     volumes:
       - db:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U labelcraft"]
+      test: ["CMD-SHELL", "pg_isready -U labeleur"]
       interval: 5s
       retries: 20
 
   keycloak:
-    image: ${LABELCRAFT_REGISTRY:-ghcr.io/d135-1r43}/labelcraft-keycloak:${LABELCRAFT_VERSION:-latest}
+    image: ${LABELEUR_REGISTRY:-ghcr.io/d135-1r43}/labeleur-keycloak:${LABELEUR_VERSION:-latest}
     depends_on:
       db:
         condition: service_healthy
     environment:
       KC_DB_URL: jdbc:postgresql://db:5432/keycloak
-      KC_DB_USERNAME: labelcraft
+      KC_DB_USERNAME: labeleur
       KC_DB_PASSWORD: ${DB_PASSWORD}
       KC_HOSTNAME: ${KEYCLOAK_URL}
       # The app reaches Keycloak inside the network; browsers use KEYCLOAK_URL.
@@ -34,9 +34,9 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      LABELCRAFT_URL: ${LABELCRAFT_URL}
-      LABELCRAFT_OIDC_SECRET: ${OIDC_SECRET}
-      LABELCRAFT_REGISTRATION_ALLOWLIST: ${LABELCRAFT_REGISTRATION_ALLOWLIST:-}
+      LABELEUR_URL: ${LABELEUR_URL}
+      LABELEUR_OIDC_SECRET: ${OIDC_SECRET}
+      LABELEUR_REGISTRATION_ALLOWLIST: ${LABELEUR_REGISTRATION_ALLOWLIST:-}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_FROM: ${SMTP_FROM}
@@ -49,17 +49,17 @@ services:
       - "8180:8080"
 
   app:
-    image: ${LABELCRAFT_REGISTRY:-ghcr.io/d135-1r43}/labelcraft:${LABELCRAFT_VERSION:-latest}
+    image: ${LABELEUR_REGISTRY:-ghcr.io/d135-1r43}/labeleur:${LABELEUR_VERSION:-latest}
     depends_on:
       db:
         condition: service_healthy
       keycloak:
         condition: service_started
     environment:
-      DB_URL: jdbc:postgresql://db:5432/labelcraft
-      DB_USER: labelcraft
+      DB_URL: jdbc:postgresql://db:5432/labeleur
+      DB_USER: labeleur
       DB_PASSWORD: ${DB_PASSWORD}
-      OIDC_URL: http://keycloak:8080/realms/labelcraft
+      OIDC_URL: http://keycloak:8080/realms/labeleur
       OIDC_SECRET: ${OIDC_SECRET}
       QUARKUS_OIDC_CONNECTION_DELAY: 120S
       QUARKUS_HTTP_PROXY_PROXY_ADDRESS_FORWARDING: "true"

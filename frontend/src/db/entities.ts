@@ -3,10 +3,10 @@ import type { Box, Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageL
 
 export type EntityId = 'contacts' | 'inventory' | 'locations' | 'recipes' | 'signs' | 'boxes';
 
-/** Where an entity's records really live. Labelcraft keeps a copy; each record links back by URI. */
+/** Where an entity's records really live. Labeleur keeps a copy; each record links back by URI. */
 export interface LeadingSystem {
   name: string;
-  /** Records are linked under this address. Empty: the entity lives only in Labelcraft. */
+  /** Records are linked under this address. Empty: the entity lives only in Labeleur. */
   baseUrl: string;
 }
 

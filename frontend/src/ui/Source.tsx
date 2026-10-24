@@ -74,7 +74,7 @@ export function SourcePanel() {
               {unlinked > 0 && <em> · {unlinked} not linked</em>}
             </span>
           ) : (
-            <span>Kept in Labelcraft only</span>
+            <span>Kept in Labeleur only</span>
           )}
         </button>
         {saveError && (

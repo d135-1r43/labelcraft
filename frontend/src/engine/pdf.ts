@@ -243,7 +243,7 @@ export async function vectorPdf(labels: { title: string; ops: DrawOp[]; frame: F
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   doc.setTitle(title);
-  doc.setCreator('Labelcraft');
+  doc.setCreator('Labeleur');
   // The page already is the label; any scaling would change its size.
   doc.catalog.getOrCreateViewerPreferences().setPrintScaling(PrintScaling.None);
   for (const label of labels) {

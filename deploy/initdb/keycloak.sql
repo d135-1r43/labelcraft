@@ -1,2 +1,2 @@
 -- Keycloak keeps its own database on the same server.
-create database keycloak owner labelcraft;
+create database keycloak owner labeleur;

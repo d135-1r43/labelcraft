@@ -68,8 +68,8 @@ export interface PrintJob {
   pdfUrl?: string;
 }
 
-/** What the Labelcraft server provides besides records: who we are, the printers, and printing. */
-export interface LabelcraftApi {
+/** What the Labeleur server provides besides records: who we are, the printers, and printing. */
+export interface LabeleurApi {
   organisation(): Promise<Organisation>;
   printers(): Promise<Printer[]>;
   jobs(): Promise<PrintJob[]>;

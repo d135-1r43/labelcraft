@@ -1,0 +1,83 @@
+# Labeleur as a Portainer stack: the app, Keycloak and PostgreSQL in one
+# file, with no files beside it. Paste it into Stacks → Add stack → Web
+# editor (or point a Git stack at deploy/portainer/docker-compose.yml) and
+# set the variables from stack.env.example under "Environment variables".
+#
+# Put a TLS-terminating proxy in front: LABELEUR_URL → APP_PORT,
+# KEYCLOAK_URL → KEYCLOAK_PORT.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    # Keycloak keeps its own database on the same server, created on first start.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo 'create database keycloak owner labeleur;' > /docker-entrypoint-initdb.d/keycloak.sql
+        exec docker-entrypoint.sh postgres
+    environment:
+      POSTGRES_USER: labeleur
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      POSTGRES_DB: labeleur
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U labeleur"]
+      interval: 5s
+      retries: 20
+
+  keycloak:
+    image: ghcr.io/d135-1r43/labeleur-keycloak:${LABELEUR_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: labeleur
+      KC_DB_PASSWORD: ${DB_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_URL:?set KEYCLOAK_URL}
+      # The app reaches Keycloak inside the stack; browsers use KEYCLOAK_URL.
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+      LABELEUR_URL: ${LABELEUR_URL:?set LABELEUR_URL}
+      LABELEUR_OIDC_SECRET: ${OIDC_SECRET:?set OIDC_SECRET}
+      LABELEUR_REGISTRATION_ALLOWLIST: ${LABELEUR_REGISTRATION_ALLOWLIST:-}
+      SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_SSL: ${SMTP_SSL:-false}
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+
+  app:
+    image: ghcr.io/d135-1r43/labeleur:${LABELEUR_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/labeleur
+      DB_USER: labeleur
+      DB_PASSWORD: ${DB_PASSWORD}
+      OIDC_URL: http://keycloak:8080/realms/labeleur
+      OIDC_SECRET: ${OIDC_SECRET}
+      # Keycloak may still be starting; the app waits for it.
+      QUARKUS_OIDC_CONNECTION_DELAY: 120S
+      QUARKUS_HTTP_PROXY_PROXY_ADDRESS_FORWARDING: "true"
+      QUARKUS_HTTP_PROXY_ALLOW_X_FORWARDED: "true"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+volumes:
+  db:

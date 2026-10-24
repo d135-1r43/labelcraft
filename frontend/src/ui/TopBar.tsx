@@ -162,7 +162,7 @@ export function TopBar() {
     <header className="topbar">
       <div className="brand">
         <Mark />
-        Labelcraft
+        Labeleur
       </div>
       {org && <span style={{ color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{org.name}</span>}
       <div className="spacer" />

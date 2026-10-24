@@ -23,7 +23,7 @@ export interface EditorProps<R, O> {
 
 /* ───────── the record and its leading system ───────── */
 
-/** The link to the record in its leading system, plus removal of Labelcraft's copy. */
+/** The link to the record in its leading system, plus removal of Labeleur's copy. */
 export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(rec: DbRecord): void; now: Date }) {
   const kindId = useStore((s) => s.kindId);
   const entity = entityById(kindById(kindId).entity);
@@ -42,10 +42,10 @@ export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(
     : outside
       ? `Outside ${hostOf(prefs.baseUrl)}, where ${system} keeps its ${entity.plural}`
       : uri
-        ? `${system} leads. Labelcraft prints from its own copy.`
+        ? `${system} leads. Labeleur prints from its own copy.`
         : prefs.baseUrl
           ? `Not linked. Paste the address of this ${entity.noun} in ${system}.`
-          : `Optional. ${entity.name} live in Labelcraft unless you set a leading system in Preferences.`;
+          : `Optional. ${entity.name} live in Labeleur unless you set a leading system in Preferences.`;
 
   return (
     <Section
@@ -55,7 +55,7 @@ export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(
           className={`btn ghost small${confirming ? ' danger' : ''}`}
           onClick={() => (confirming ? deleteRecord(rec.id) : setConfirming(true))}
           onBlur={() => setConfirming(false)}
-          title={uri ? `Removes Labelcraft's copy. The record in ${system} stays.` : undefined}
+          title={uri ? `Removes Labeleur's copy. The record in ${system} stays.` : undefined}
         >
           {confirming ? `Remove this ${entity.noun}` : 'Remove'}
         </button>
@@ -74,7 +74,7 @@ export function LeadingRecord({ rec, onChange, now }: { rec: DbRecord; onChange(
           <Icon.link /> Link as …/{encodeURIComponent(key!)}
         </button>
       )}
-      {rec.updatedAt && <div className="meta">Changed in Labelcraft {relativeTime(rec.updatedAt, now.getTime())}</div>}
+      {rec.updatedAt && <div className="meta">Changed in Labeleur {relativeTime(rec.updatedAt, now.getTime())}</div>}
     </Section>
   );
 }
@@ -337,7 +337,7 @@ export function AssetEditor({ rec, options, onChange, setOption }: EditorProps<I
           />
         </Field>
         {options.symbology === 'qr' && (
-          <Field label="QR code opens" hint={options.qrTarget === 'labelcraft' ? 'Scanning asks for a Labelcraft sign-in' : rec.uri ? undefined : 'This item has no link yet, so the code holds only the tag'}>
+          <Field label="QR code opens" hint={options.qrTarget === 'labeleur' ? 'Scanning asks for a Labeleur sign-in' : rec.uri ? undefined : 'This item has no link yet, so the code holds only the tag'}>
             <Segmented
               block
               label="QR code opens"
@@ -345,7 +345,7 @@ export function AssetEditor({ rec, options, onChange, setOption }: EditorProps<I
               onChange={(v) => setOption('qrTarget', v)}
               options={[
                 { value: 'leading', label: systemName },
-                { value: 'labelcraft', label: 'Labelcraft' },
+                { value: 'labeleur', label: 'Labeleur' },
               ]}
             />
           </Field>
@@ -540,7 +540,7 @@ export function ContentsEditor({ rec, options, onChange, setOption }: EditorProp
             Upload a logo
           </button>
         )}
-        <Toggle checked={options.qr} onChange={(v) => setOption('qr', v)} label="QR code" hint="Opens this case in Labelcraft" />
+        <Toggle checked={options.qr} onChange={(v) => setOption('qr', v)} label="QR code" hint="Opens this case in Labeleur" />
         {options.qr && <div className="hint num">{boxLink(location.origin, rec)}</div>}
       </Section>
     </>

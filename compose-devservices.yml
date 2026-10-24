@@ -1,8 +1,8 @@
 # Started by Quarkus in dev mode (Compose Dev Services) next to the
-# PostgreSQL it starts itself: Keycloak with the Labelcraft realm, theme and
+# PostgreSQL it starts itself: Keycloak with the Labeleur realm, theme and
 # allowlist, and Mailpit to catch verification and password-reset mail.
 #
-#   App              http://localhost:8080   dev@labelcraft.test / labelcraft-dev
+#   App              http://localhost:8080   dev@labeleur.test / labeleur-dev
 #   Keycloak admin   http://localhost:8180   admin / admin
 #   Mail             http://localhost:8025
 #
@@ -11,7 +11,7 @@
 services:
   keycloak:
     build: ./keycloak
-    image: labelcraft-keycloak:dev
+    image: labeleur-keycloak:dev
     command: ["start-dev", "--import-realm"]
     ports:
       - "8180:8080"
@@ -19,21 +19,21 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_DB: dev-file
-      LABELCRAFT_URL: http://localhost:8080
-      LABELCRAFT_OIDC_SECRET: labelcraft-dev-secret
-      LABELCRAFT_REGISTRATION_ALLOWLIST: ${LABELCRAFT_REGISTRATION_ALLOWLIST:-}
+      LABELEUR_URL: http://localhost:8080
+      LABELEUR_OIDC_SECRET: labeleur-dev-secret
+      LABELEUR_REGISTRATION_ALLOWLIST: ${LABELEUR_REGISTRATION_ALLOWLIST:-}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
-      SMTP_FROM: labelcraft@localhost
+      SMTP_FROM: labeleur@localhost
       SMTP_AUTH: "false"
       SMTP_USER: ""
       SMTP_PASSWORD: ""
       SMTP_STARTTLS: "false"
       SMTP_SSL: "false"
     volumes:
-      - ./keycloak/themes/labelcraft:/opt/keycloak/themes/labelcraft:ro
+      - ./keycloak/themes/labeleur:/opt/keycloak/themes/labeleur:ro
       # A signed-in user from the first start, imported only in dev.
-      - ./keycloak/dev/labelcraft-users-0.json:/opt/keycloak/data/import/labelcraft-users-0.json:ro
+      - ./keycloak/dev/labeleur-users-0.json:/opt/keycloak/data/import/labeleur-users-0.json:ro
     labels:
       io.quarkus.devservices.compose.wait_for.logs: .*Running the server in development mode.*
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { accountApi, httpApi, settingsApi, type Me } from '../api/http';
-import type { LabelcraftApi, Organisation, PdfMode, PrintJob, Printer } from '../api/types';
+import type { LabeleurApi, Organisation, PdfMode, PrintJob, Printer } from '../api/types';
 import { decodeBitmap } from '../engine/bitmap';
 import { landscapeReadAlong } from '../engine/frame';
 import { mediaById } from '../engine/media';
@@ -11,7 +11,7 @@ import { useDb } from '../db/store';
 import { KINDS, kindById } from '../kinds';
 import type { KindId, Rec } from '../kinds/types';
 
-export const api: LabelcraftApi = httpApi;
+export const api: LabeleurApi = httpApi;
 
 const SETTINGS_SAVE_DELAY_MS = 500;
 const settingsTimers = new Map<EntityId, ReturnType<typeof setTimeout>>();
@@ -218,7 +218,7 @@ export const useStore = create<Store>()(
       };
     },
     {
-      name: 'labelcraft',
+      name: 'labeleur',
       version: 3,
       partialize: (s) => ({ kindId: s.kindId, kinds: s.kinds, locale: s.locale, printerId: s.printerId, view: s.view, guides: s.guides, loupe: s.loupe, pdfMode: s.pdfMode }),
       // Version 1 kept edits as drafts, version 2 kept entity settings; both live on the server now.

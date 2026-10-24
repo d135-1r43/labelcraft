@@ -248,7 +248,7 @@ function EntityCard({ entity, lastOn }: { entity: EntityDef; lastOn: boolean }) 
                   </span>
                 </>
               ) : (
-                <>No leading system: {entity.name.toLowerCase()} live only in Labelcraft.</>
+                <>No leading system: {entity.name.toLowerCase()} live only in Labeleur.</>
               )}
             </p>
             <div className="actions">
@@ -300,10 +300,10 @@ export function Preferences() {
           <SenderCard />
           <div className="intro">
             <h3>Label types</h3>
-            <p>Switch on the labels you print. Each one prints from its own list of records, which Labelcraft keeps a copy of. Where those records are really maintained, in your CRM or inventory, is the leading system. Every record links back to it.</p>
+            <p>Switch on the labels you print. Each one prints from its own list of records, which Labeleur keeps a copy of. Where those records are really maintained, in your CRM or inventory, is the leading system. Every record links back to it.</p>
             <ol className="flow" aria-label="How records flow">
               <li>Leading system</li>
-              <li>Labelcraft copy</li>
+              <li>Labeleur copy</li>
               <li>Printed label</li>
             </ol>
           </div>

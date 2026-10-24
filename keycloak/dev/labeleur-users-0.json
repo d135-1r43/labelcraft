@@ -1,0 +1,14 @@
+{
+  "realm": "labeleur",
+  "users": [
+    {
+      "username": "dev@labeleur.test",
+      "email": "dev@labeleur.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Dev",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "labeleur-dev", "temporary": false }]
+    }
+  ]
+}

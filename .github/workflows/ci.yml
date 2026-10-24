@@ -54,7 +54,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ghcr.io/${{ github.repository_owner }}/labelcraft
+            ghcr.io/${{ github.repository_owner }}/labeleur
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
@@ -67,7 +67,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ghcr.io/${{ github.repository_owner }}/labelcraft-keycloak
+            ghcr.io/${{ github.repository_owner }}/labeleur-keycloak
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
@@ -84,7 +84,7 @@ jobs:
           load: true
           push: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/labelcraft:smoke
+            ghcr.io/${{ github.repository_owner }}/labeleur:smoke
             ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -95,22 +95,22 @@ jobs:
           load: true
           push: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/labelcraft-keycloak:smoke
+            ghcr.io/${{ github.repository_owner }}/labeleur-keycloak:smoke
             ${{ steps.meta-keycloak.outputs.tags }}
           labels: ${{ steps.meta-keycloak.outputs.labels }}
 
       ## The production compose file with the images just built: PostgreSQL,
       ## Keycloak importing the realm, and the app. The script signs in through
-      ## the Labelcraft login page, reads records and prints a PDF.
+      ## the Labeleur login page, reads records and prints a PDF.
       - name: Check the stack serves
         env:
-          LABELCRAFT_REGISTRY: ghcr.io/${{ github.repository_owner }}
+          LABELEUR_REGISTRY: ghcr.io/${{ github.repository_owner }}
         run: |
           set -eu
           docker compose -p smoke --env-file .github/smoke/smoke.env -f deploy/docker-compose.yml up -d
           ok=
           for _ in $(seq 1 90); do
-            if curl -fsS -o /dev/null http://localhost:8180/realms/labelcraft \
+            if curl -fsS -o /dev/null http://localhost:8180/realms/labeleur \
               && [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)" = 302 ]; then ok=1; break; fi
             sleep 2
           done
