@@ -3,8 +3,9 @@
 # editor (or point a Git stack at deploy/portainer/docker-compose.yml) and
 # set the variables from stack.env.example under "Environment variables".
 #
-# Put a TLS-terminating proxy in front: LABELEUR_URL → APP_PORT,
-# KEYCLOAK_URL → KEYCLOAK_PORT.
+# The app and Keycloak join the external nginx-proxy-manager network and
+# publish no host ports. In Nginx Proxy Manager, point LABELEUR_URL at
+# labeleur:8080 and KEYCLOAK_URL at labeleur-keycloak:8080.
 services:
   db:
     image: postgres:17
@@ -28,6 +29,7 @@ services:
       retries: 20
 
   keycloak:
+    container_name: labeleur-keycloak
     image: ghcr.io/d135-1r43/labeleur-keycloak:${LABELEUR_VERSION:-latest}
     restart: unless-stopped
     depends_on:
@@ -55,10 +57,12 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       SMTP_SSL: ${SMTP_SSL:-false}
-    ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
+    networks:
+      - default
+      - nginx-proxy-manager
 
   app:
+    container_name: labeleur
     image: ghcr.io/d135-1r43/labeleur:${LABELEUR_VERSION:-latest}
     restart: unless-stopped
     depends_on:
@@ -76,8 +80,13 @@ services:
       QUARKUS_OIDC_CONNECTION_DELAY: 120S
       QUARKUS_HTTP_PROXY_PROXY_ADDRESS_FORWARDING: "true"
       QUARKUS_HTTP_PROXY_ALLOW_X_FORWARDED: "true"
-    ports:
-      - "${APP_PORT:-8080}:8080"
+    networks:
+      - default
+      - nginx-proxy-manager
 
 volumes:
   db:
+
+networks:
+  nginx-proxy-manager:
+    external: true
