@@ -35,7 +35,7 @@ export function compose({ kindId, rec, ks, locale, org, printer, now }: ComposeI
   const media = mediaById(ks.mediaId);
   const frame = makeFrame({ media, readAlong: ks.readAlong, lengthMm: ks.lengthMm });
   const ts = typeSystemById(ks.typeSystemId);
-  const layout = def.layout(rec, ks.options, { m: getMeasurer(), frame, ts, locale, org, now });
+  const layout = def.layout(rec, ks.options, { m: getMeasurer(), frame, ts, locale, org, now, appUrl: location.origin });
   const issues: Issue[] = [...layout.issues];
 
   const smallest = Math.min(...layout.ops.filter((o) => o.t === 'text').map((o) => mmToPt(o.sizeMm)));

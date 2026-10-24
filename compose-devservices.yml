@@ -2,6 +2,7 @@
 # PostgreSQL it starts itself: Keycloak with the Labelcraft realm, theme and
 # allowlist, and Mailpit to catch verification and password-reset mail.
 #
+#   App              http://localhost:8080   dev@labelcraft.test / labelcraft-dev
 #   Keycloak admin   http://localhost:8180   admin / admin
 #   Mail             http://localhost:8025
 #
@@ -31,6 +32,8 @@ services:
       SMTP_SSL: "false"
     volumes:
       - ./keycloak/themes/labelcraft:/opt/keycloak/themes/labelcraft:ro
+      # A signed-in user from the first start, imported only in dev.
+      - ./keycloak/dev/labelcraft-users-0.json:/opt/keycloak/data/import/labelcraft-users-0.json:ro
     labels:
       io.quarkus.devservices.compose.wait_for.logs: .*Running the server in development mode.*
 

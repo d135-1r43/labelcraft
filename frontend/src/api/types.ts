@@ -1,8 +1,13 @@
+import type { Bitmap } from '../engine/bitmap';
 import type { Address } from '../kinds/address/address';
 
 export interface Organisation {
   name: string;
   address: Address;
+  /** When the logo was uploaded; absent without one. */
+  logoUpdatedAt?: string;
+  /** The logo, decoded in the browser. Never sent. */
+  logo?: Bitmap;
 }
 
 export type PrinterStatus = 'ready' | 'printing' | 'offline' | 'cover-open' | 'no-media';

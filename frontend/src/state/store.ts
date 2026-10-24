@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { accountApi, httpApi, settingsApi, type Me } from '../api/http';
 import type { LabelcraftApi, Organisation, PdfMode, PrintJob, Printer } from '../api/types';
+import { decodeBitmap } from '../engine/bitmap';
 import { landscapeReadAlong } from '../engine/frame';
 import { mediaById } from '../engine/media';
 import type { TypeLocale } from '../engine/typeset';
@@ -66,6 +67,8 @@ interface Store {
   setEntity(id: EntityId, patch: Partial<EntityPrefs>): void;
   set<K extends keyof Store>(key: K, value: Store[K]): void;
   boot(): Promise<void>;
+  /** Upload a new logo, or remove it with null. */
+  setLogo(file: File | null): Promise<void>;
   refreshPrinters(): Promise<void>;
   upsertJob(job: PrintJob): void;
 }
@@ -186,7 +189,7 @@ export const useStore = create<Store>()(
           try {
             // First, so a new user's sample data exists before anything else is read.
             const me = await accountApi.me();
-            const [org, printers, jobs, entities] = await Promise.all([api.organisation(), api.printers(), api.jobs(), settingsApi.all(), useDb.getState().load()]);
+            const [org, printers, jobs, entities] = await Promise.all([api.organisation().then(withLogo), api.printers(), api.jobs(), settingsApi.all(), useDb.getState().load()]);
             set({ me, org, printers, jobs, entities: { ...get().entities, ...entities }, bootError: null });
           } catch (e) {
             set({ bootError: (e as Error).message });
@@ -195,6 +198,13 @@ export const useStore = create<Store>()(
           const kinds = enabledKinds(get().entities);
           if (!kinds.includes(get().kindId) && kinds[0]) set({ kindId: kinds[0] });
           ensureActive(get().kindId);
+          openLinkedRecord();
+        },
+        async setLogo(file) {
+          // Decode first: a file the browser cannot draw never reaches the server.
+          const logo = file ? await decodeBitmap(file).catch(() => Promise.reject(new Error('This file is not an image the browser can read.'))) : undefined;
+          const org = file ? await accountApi.uploadLogo(file) : await accountApi.removeLogo();
+          set((s) => ({ org: s.org && { ...s.org, logoUpdatedAt: org.logoUpdatedAt, logo } }));
         },
         async refreshPrinters() {
           set({ printers: await api.printers() });
@@ -230,6 +240,17 @@ export const useStore = create<Store>()(
   ),
 );
 
+/** Fetch and decode the logo, if there is one. A logo that fails to load is left off the labels. */
+async function withLogo(org: Organisation): Promise<Organisation> {
+  if (!org.logoUpdatedAt) return org;
+  try {
+    const blob = await accountApi.logo();
+    return blob ? { ...org, logo: await decodeBitmap(blob) } : org;
+  } catch {
+    return org;
+  }
+}
+
 /** The kinds whose entity is switched on, in rail order. */
 export const enabledKinds = (entities: Record<EntityId, EntityPrefs>) => KINDS.filter((k) => entities[k.entity].enabled).map((k) => k.id);
 
@@ -245,6 +266,20 @@ function ensureActive(kind: KindId) {
   const first = recs.find((r) => ks.selection.includes(r.id)) ?? recs[0];
   if (!first) return;
   useStore.setState((st) => ({ kinds: { ...st.kinds, [kind]: { ...st.kinds[kind], activeId: first.id, selection: ks.selection.includes(first.id) ? ks.selection : [first.id] } } }));
+}
+
+/** A scanned code links to /r/{entity}/{id}: show that record on its label, then drop the path. */
+function openLinkedRecord() {
+  const link = location.pathname.match(/^\/r\/([a-z]+)\/([^/]+)$/);
+  if (!link) return;
+  history.replaceState(null, '', '/');
+  const entity = link[1] as EntityId;
+  const id = decodeURIComponent(link[2]);
+  const s = useStore.getState();
+  const kind = enabledKinds(s.entities).find((k) => kindById(k).entity === entity);
+  if (!kind || !useDb.getState().collections[entity]?.some((r) => r.id === id)) return;
+  s.setKind(kind);
+  useStore.getState().setActive(id);
 }
 
 export const useKindState = () => useStore((s) => s.kinds[s.kindId]);

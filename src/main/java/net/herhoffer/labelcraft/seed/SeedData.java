@@ -36,9 +36,24 @@ public class SeedData
 		}
 	}
 
+	/** A sample file as it is, such as the sample logo. */
+	public byte[] bytes(String name)
+	{
+		try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream("seed/" + name))
+		{
+			if (in == null) throw new IllegalStateException("Missing seed/" + name);
+			return in.readAllBytes();
+		}
+		catch (IOException e)
+		{
+			throw new UncheckedIOException(e);
+		}
+	}
+
 	/**
-	 * Insert a collection's samples for a user, keeping their order. Call
-	 * inside a transaction.
+	 * Insert a collection's samples for a user, keeping their order. A sample
+	 * whose id the user already has is left out, so their record stays as it
+	 * is. Call inside a transaction.
 	 */
 	public <T extends RecordEntity> void insert(RecordCollection<T> c, String owner)
 	{
@@ -47,6 +62,7 @@ public class SeedData
 		for (int i = 0; i < recs.size(); i++)
 		{
 			T r = recs.get(i);
+			if (c.find(owner, r.id) != null) continue;
 			r.userId = owner;
 			r.createdAt = base.plusMillis(i);
 			c.repository().persist(r);

@@ -1759,3 +1759,61 @@ dialog.prefs::backdrop {
 .sender-card .bad {
   color: var(--error);
 }
+
+.logo-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-dots,
+.logo-empty {
+  flex: none;
+  max-width: 140px;
+  padding: 6px;
+  border: 1px dashed var(--rule);
+  border-radius: 6px;
+  background: #fff;
+  image-rendering: pixelated;
+}
+
+.logo-empty {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 56px;
+  box-sizing: content-box;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.logo-actions small {
+  flex-basis: 100%;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.logo-actions small.bad {
+  color: var(--error);
+}
+
+.logo-actions label.btn {
+  cursor: pointer;
+}
+
+.logo-actions label.btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+textarea.input.contents-list {
+  line-height: 1.5;
+  resize: vertical;
+}

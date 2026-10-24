@@ -1,7 +1,7 @@
 import type { KindId } from '../kinds/types';
-import type { Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageLocation } from './types';
+import type { Box, Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageLocation } from './types';
 
-export type EntityId = 'contacts' | 'inventory' | 'locations' | 'recipes' | 'signs';
+export type EntityId = 'contacts' | 'inventory' | 'locations' | 'recipes' | 'signs' | 'boxes';
 
 /** Where an entity's records really live. Labelcraft keeps a copy; each record links back by URI. */
 export interface LeadingSystem {
@@ -119,7 +119,24 @@ const signs: EntityDef<Sign> = {
   blank: () => ({ title: '', subtitle: '' }),
 };
 
-export const ENTITIES = [contacts, inventory, locations, recipes, signs] as unknown as EntityDef[];
+const boxes: EntityDef<Box> = {
+  id: 'boxes',
+  name: 'Cases',
+  noun: 'case',
+  plural: 'cases',
+  kinds: ['contents'],
+  system: { name: '', baseUrl: '' },
+  title: (b) => b.title || 'New case',
+  subtitle: (b) => {
+    const n = b.items.filter((t) => t.trim()).length;
+    return n === 1 ? '1 item' : `${n} items`;
+  },
+  group: () => '',
+  groupLabel: '',
+  blank: () => ({ title: '', items: [] }),
+};
+
+export const ENTITIES = [contacts, inventory, locations, recipes, signs, boxes] as unknown as EntityDef[];
 
 export const entityById = (id: EntityId) => ENTITIES.find((e) => e.id === id)!;
 

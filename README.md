@@ -1,6 +1,6 @@
 # Labelcraft
 
-A label designer for Brother QL printers that knows what it is printing. You don't draw text boxes. You choose what the label is (an address, an asset tag, a shelf location, a food date or a sign), point it at a record, and Labelcraft sets it.
+A label designer for Brother QL printers that knows what it is printing. You don't draw text boxes. You choose what the label is (an address, an asset tag, a shelf location, a road case's contents, a food date or a sign), point it at a record, and Labelcraft sets it.
 
 ```
 ./mvnw quarkus:dev    # http://localhost:8080 — app, API, database, Keycloak and mail
@@ -12,7 +12,7 @@ Dev mode needs Docker running. Quarkus starts PostgreSQL itself, and `compose-de
 
 | | |
 |---|---|
-| App | http://localhost:8080. Register an account on the sign-in page |
+| App | http://localhost:8080, `dev@labelcraft.test` / `labelcraft-dev`, or register a new account on the sign-in page |
 | Mail (verification, password reset) | http://localhost:8025 |
 | Keycloak admin | http://localhost:8180, `admin` / `admin` |
 
@@ -39,8 +39,9 @@ frontend/                  React app (Vite, TypeScript)
 | Label | Records | Semantics |
 |---|---|---|
 | **Address** | Contacts | Line order, postcode format and casing for 20 countries (DIN 5008, Royal Mail, USPS, La Poste, PostNL, Canada Post …). Adds the destination country line in the sender's language; writes the return-address country in English. Parses pasted address blocks. Splits long company names over two lines when that lets the address be set larger. |
-| **Asset tag** | Inventory | QR code that opens the record in the inventory system (its link), or a Data Matrix with the tag. Tag prefix set one weight lighter. Text aligned to the code's top and bottom edges. |
+| **Asset tag** | Inventory | Your logo and the ownership line. QR code that opens the record in the inventory system (its link) or in Labelcraft, chosen per label; or a Data Matrix with the tag. Tag prefix set one weight lighter. Text aligned to the code's top and bottom edges. |
 | **Storage location** | Locations | Aisle, rack and shelf as large figures with captions, a knocked-out direction arrow, and Code 128 only where it will scan. |
+| **Case contents** | Cases | For road cases and boxes that travel: the case's name in condensed capitals, then what is in it, set in as many columns as gives the largest type. Your logo (reduced to printer dots), your name and address as the owner, and a QR code that opens the case in Labelcraft. A side panel on landscape labels, a band on portrait ones; suggests a cut length on continuous tape. |
 | **Food date** | Recipes | Computes use-by from shelf life and preparation time (follows the clock), shows the weekday as the main signal, declares EU allergens, and prints the use-by block in red on DK-22251. |
 | **Sign** | Signs | Free text with optimal line breaks and hyphenation; suggests a cut length on continuous tape. |
 
@@ -74,9 +75,9 @@ Keycloak signs people in (OIDC code flow with PKCE; the app holds the session). 
 
 ## Records and leading systems
 
-Labelcraft keeps its own database of the records it prints: contacts, inventory, locations, recipes and signs, one PostgreSQL table each. Everything is edited in Labelcraft, but the organisation's CRM, inventory or ERP stays the source of truth: every record carries a `uri` to its original there. The record panel shows the link, opens it, and offers to link by asset tag or bin code when the leading system addresses records that way. Asset QR codes encode that link.
+Labelcraft keeps its own database of the records it prints: contacts, inventory, locations, cases, recipes and signs, one PostgreSQL table each. Everything is edited in Labelcraft, but the organisation's CRM, inventory or ERP stays the source of truth: every record carries a `uri` to its original there. The record panel shows the link, opens it, and offers to link by asset tag or bin code when the leading system addresses records that way. Asset QR codes encode that link, or a link back to Labelcraft: `/r/{collection}/{id}` opens that record after sign-in.
 
-In **Preferences** (cog, top right) each label type is a card with a live preview. It can be switched off, which removes it from the sidebar, and given a leading system: a name and the base URL its records live under.
+In **Preferences** (cog, top right) the sender card holds your address and logo. Each label type is a card with a live preview. It can be switched off, which removes it from the sidebar, and given a leading system: a name and the base URL its records live under.
 
 On a fresh database the sample organisation is seeded from `src/main/resources/seed` (`labelcraft.seed-on-start`).
 
@@ -86,13 +87,14 @@ Quarkus with Hibernate ORM and Panache in the repository pattern: one `PanacheRe
 
 | Endpoint | |
 |---|---|
-| `GET /api/records/{collection}` | `contacts`, `inventory`, `locations`, `recipes`, `signs` |
+| `GET /api/records/{collection}` | `contacts`, `inventory`, `locations`, `recipes`, `signs`, `boxes` |
 | `PUT /api/records/{collection}/{id}` | create or replace; ids are chosen by the client |
 | `DELETE /api/records/{collection}/{id}` | removes Labelcraft's copy only |
 | `POST /api/records/{collection}/reset` | restore the samples |
 | `GET`, `PUT /api/settings/entities[/{id}]` | on/off and leading system per entity |
 | `GET /api/me` | the signed-in user; sets up their sample data on first call |
 | `GET`, `PUT /api/organisation` | the user's sender: return address and owner line |
+| `GET`, `PUT`, `DELETE /api/organisation/logo` | the logo on case labels and asset tags: PNG, JPEG, GIF, WebP or SVG, up to 2 MB |
 | `GET /api/printers` | printers and their loaded roll (simulated) |
 | `POST /api/print-jobs` | multipart: `job` (JSON) and one `page` PNG per label |
 | `GET /api/print-jobs`, `GET /api/print-jobs/{id}/pdf` | recent jobs and their PDFs |

@@ -8,6 +8,7 @@ import { compose } from '../state/compose';
 import { useStore } from '../state/store';
 import { accountApi } from '../api/http';
 import { countryName, SUPPORTED_COUNTRIES } from '../kinds/address/address';
+import { toDots } from '../engine/bitmap';
 import { Field, TextInput } from './controls';
 import { Icon } from './icons';
 
@@ -53,11 +54,77 @@ function MiniLabel({ kindId, entity }: { kindId: KindId; entity: EntityDef }) {
   );
 }
 
+const LOGO_PREVIEW_H = 56;
+
+/** The logo as the printer will print it: black dots, no greys. */
+function LogoDots() {
+  const logo = useStore((s) => s.org?.logo);
+  const ref = useRef<HTMLCanvasElement>(null);
+  useLayoutEffect(() => {
+    const c = ref.current;
+    if (!c || !logo) return;
+    const h = Math.min(LOGO_PREVIEW_H * 2, logo.h);
+    const w = Math.max(1, Math.round((logo.w * h) / logo.h));
+    const bits = toDots(logo, w, h);
+    c.width = w;
+    c.height = h;
+    const img = c.getContext('2d')!.createImageData(w, h);
+    for (let i = 0; i < bits.length; i++) {
+      const v = bits[i] ? 20 : 255;
+      img.data.set([v, v, v, 255], i * 4);
+    }
+    c.getContext('2d')!.putImageData(img, 0, 0);
+  }, [logo]);
+  if (!logo) return <div className="logo-empty">No logo</div>;
+  return <canvas ref={ref} className="logo-dots" style={{ height: LOGO_PREVIEW_H, aspectRatio: `${logo.w} / ${logo.h}` }} aria-label="Your logo, as printed" />;
+}
+
+function LogoField() {
+  const hasLogo = useStore((s) => !!s.org?.logo);
+  const setLogo = useStore((s) => s.setLogo);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = (file: File | null) => {
+    setBusy(true);
+    setError(null);
+    setLogo(file)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="logo-field">
+      <LogoDots />
+      <div className="logo-actions">
+        <label className={`btn small${busy ? ' disabled' : ''}`}>
+          {hasLogo ? 'Replace logo' : 'Upload logo'}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+            hidden
+            disabled={busy}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) run(file);
+            }}
+          />
+        </label>
+        {hasLogo && (
+          <button className="btn ghost small" disabled={busy} onClick={() => run(null)}>
+            Remove
+          </button>
+        )}
+        <small className={error ? 'bad' : undefined}>{error ?? 'Printed on case labels and asset tags. SVG or PNG, black on white works best; up to 2 MB.'}</small>
+      </div>
+    </div>
+  );
+}
+
 const SENDER_SAVE_DELAY_MS = 500;
 let senderTimer: ReturnType<typeof setTimeout> | undefined;
 const countries = [...SUPPORTED_COUNTRIES].sort((a, b) => countryName(a, 'en').localeCompare(countryName(b, 'en')));
 
-/** The return address on address labels and the owner on asset tags. */
+/** The return address on address labels, the owner on asset tags and boxes, and the logo. */
 function SenderCard() {
   const org = useStore((s) => s.org);
   const set = useStore((s) => s.set);
@@ -81,7 +148,7 @@ function SenderCard() {
       <div className="content">
         <div className="head">
           <span className="name">Sender</span>
-          <small>Your return address on address labels, and the owner on asset tags</small>
+          <small>Your return address on address labels, and the owner on asset tags and boxes</small>
         </div>
         <div className="row">
           <Field label="Name or organisation">
@@ -113,6 +180,9 @@ function SenderCard() {
             <TextInput value={a.city} onChange={(v) => change({}, { city: v || undefined })} />
           </Field>
         </div>
+        <Field label="Logo">
+          <LogoField />
+        </Field>
         <p className="explain">{error ? <span className="bad">Not saved. {error}</span> : line ? <>Printed as: {[org.name, line].join(' · ')}</> : 'No return address yet.'}</p>
       </div>
     </article>
@@ -243,7 +313,7 @@ export function Preferences() {
         </div>
       )}
       <footer>
-        <span className="meta">Saved in this browser as you type</span>
+        <span className="meta">Saved to your account as you type</span>
         <button className="btn primary" onClick={() => set('prefsOpen', false)}>
           Done
         </button>

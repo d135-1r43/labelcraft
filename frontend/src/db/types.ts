@@ -46,6 +46,13 @@ export interface FoodProduct extends DbRecord {
   allergens: AllergenCode[];
 }
 
+/** A road case or box that travels, and what is packed in it. */
+export interface Box extends DbRecord {
+  title: string;
+  /** One line per thing packed. */
+  items: string[];
+}
+
 export interface Sign extends DbRecord {
   title: string;
   subtitle: string;

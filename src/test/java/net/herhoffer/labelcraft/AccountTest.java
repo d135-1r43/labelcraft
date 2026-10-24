@@ -1,15 +1,21 @@
 package net.herhoffer.labelcraft;
 
+import java.util.Base64;
+
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 @QuarkusTest
 class AccountTest
@@ -63,5 +69,38 @@ class AccountTest
 			.body("name", equalTo("Frank Feld"));
 		given().get("/api/organisation").then().body("address.city", equalTo("Berlin"));
 		given().contentType(ContentType.JSON).body("{\"name\": \"x\", \"address\": {\"country\": \"Germany\"}}").put("/api/organisation").then().statusCode(400);
+	}
+
+	@Test
+	@TestSecurity(user = "judy")
+	void aNewUserStartsWithTheSampleLogo()
+	{
+		given().get("/api/organisation").then().statusCode(200).body("logoUpdatedAt", notNullValue());
+		given().get("/api/organisation/logo").then().statusCode(200).contentType("image/svg+xml");
+	}
+
+	@Test
+	@TestSecurity(user = "grace")
+	void uploadsAndRemovesTheLogo()
+	{
+		byte[] png = Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==");
+		given().contentType("image/png").body(png).put("/api/organisation/logo").then().statusCode(200).body("logoUpdatedAt", notNullValue());
+		given().get("/api/organisation/logo").then().statusCode(200).contentType("image/png").header("Content-Security-Policy", containsString("sandbox"));
+		given().contentType("application/pdf").body(png).put("/api/organisation/logo").then().statusCode(415);
+		given().delete("/api/organisation/logo").then().statusCode(200).body("logoUpdatedAt", nullValue());
+		given().get("/api/organisation/logo").then().statusCode(404);
+	}
+
+	@Test
+	@TestSecurity(user = "heidi")
+	void keepsBoxesAndTheirContents()
+	{
+		given().get("/api/records/boxes").then().statusCode(200).body("find { it.id == 'b2' }.items", hasItem("Shure SM58 (6)"));
+		given().contentType(ContentType.JSON)
+			.body("{\"title\": \"Merch\", \"items\": [\"Shirts\", \"Kartenleser\"]}")
+			.put("/api/records/boxes/box-merch")
+			.then()
+			.statusCode(200);
+		given().get("/api/records/boxes").then().body("find { it.id == 'box-merch' }.items", contains("Shirts", "Kartenleser"));
 	}
 }

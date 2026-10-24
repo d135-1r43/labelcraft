@@ -1,0 +1,27 @@
+[
+  {
+    "id": "b1",
+    "title": "FOH-Rack",
+    "items": ["Allen & Heath dLive C1500", "DM48 MixRack (Stage)", "Klark Teknik DN370 EQ", "Netzwerk-Switch, 8 Port", "MacBook mit Shure Wireless Workbench", "Talkback-Mikrofon", "Kopfhörer Sony MDR-7506"]
+  },
+  {
+    "id": "b2",
+    "title": "Mikrofone",
+    "items": ["Shure SM58 (6)", "Shure SM57 (4)", "Shure Beta 52A", "Shure Beta 91A", "Sennheiser e904 (4)", "Neumann KM 184 (2)", "Sennheiser MD 421 (3)", "Klemmen und Clips"]
+  },
+  {
+    "id": "b3",
+    "title": "Stagebox & Multicore",
+    "items": ["Stagebox 32/16", "Multicore 50 m", "Sub-Snake 12/4, 15 m (2)", "Cat-6 Trommel 100 m", "Powercon-Verteiler"]
+  },
+  {
+    "id": "b4",
+    "title": "DIs & Kabel",
+    "items": ["Radial J48 (4)", "BSS AR-133 (2)", "XLR 10 m (24)", "XLR 5 m (16)", "Klinke 6 m (8)", "Adapter-Tasche", "Gaffa schwarz und weiß"]
+  },
+  {
+    "id": "b5",
+    "title": "In-Ear Monitoring",
+    "items": ["Shure PSM 1000 Sender (4)", "Bodypacks P10R+ (8)", "Antennen-Combiner PA821B", "Helix-Antenne", "Ultimate Ears UE 6 (8)", "Ersatz-Akkus und Ladestation"]
+  }
+]

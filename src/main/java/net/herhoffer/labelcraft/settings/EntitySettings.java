@@ -23,7 +23,9 @@ public class EntitySettings extends PanacheEntityBase
 	@JsonIgnore
 	public String userId;
 
-	/** The collection: contacts, inventory, locations, recipes, signs. */
+	/**
+	 * The collection: contacts, inventory, locations, recipes, signs, boxes.
+	 */
 	@Id
 	public String id;
 

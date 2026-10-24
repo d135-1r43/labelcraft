@@ -1,14 +1,18 @@
 import type { InventoryItem } from '../../db/types';
 import { placeCode, type Symbology } from '../../engine/barcode';
+import { placeBitmap } from '../../engine/bitmap';
 import type { DrawOp, Issue, TextOp } from '../../engine/display';
 import { fitText, measure, type Box, type TextStyle } from '../../engine/text';
 import { typeset } from '../../engine/typeset';
-import { ptToMm } from '../../engine/units';
+import { dotsToMm, ptToMm } from '../../engine/units';
 import type { KindDef, LayoutEnv } from '../types';
 
 export interface AssetOptions {
   symbology: Extract<Symbology, 'qr' | 'datamatrix'>;
+  /** What the QR code opens: the record in the inventory system, or in Labelcraft. */
+  qrTarget: 'leading' | 'labelcraft';
   ownerLine: boolean;
+  logo: boolean;
   detail: 'serial' | 'location' | 'both' | 'none';
 }
 
@@ -35,6 +39,19 @@ function tagOps(env: LayoutEnv, tag: string, box: Box, maxPt: number, align: 'le
   };
 }
 
+/** The link to this record in Labelcraft itself. */
+export const labelcraftLink = (appUrl: string, item: InventoryItem) => `${appUrl}/r/inventory/${encodeURIComponent(item.id)}`;
+
+/**
+ * What the code holds. A QR code opens the record, in the leading system or
+ * in Labelcraft; without a link, and in Data Matrix, it carries only the tag.
+ */
+export function assetPayload(item: InventoryItem, o: AssetOptions, appUrl: string) {
+  if (o.symbology !== 'qr') return item.assetTag;
+  if (o.qrTarget === 'labelcraft') return labelcraftLink(appUrl, item);
+  return item.uri || item.assetTag;
+}
+
 export const assetKind: KindDef<InventoryItem, AssetOptions> = {
   id: 'asset',
   name: 'Asset tag',
@@ -42,7 +59,7 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
   defaultMedia: 'DK-11201',
   media: ['DK-11201', 'DK-11221', 'DK-11204', 'DK-22211', 'DK-11209'],
   defaultTypeSystem: 'plex',
-  defaultOptions: { symbology: 'qr', ownerLine: true, detail: 'serial' },
+  defaultOptions: { symbology: 'qr', qrTarget: 'leading', ownerLine: true, logo: true, detail: 'serial' },
   entity: 'inventory',
 
 
@@ -64,9 +81,8 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
     }
     const k = clamp(H / 25.9, 0.55, 2.2);
     const pad = frame.shape === 'round' ? 0.3 : clamp(Math.min(W, H) * 0.075, 1, 3.5);
-    // The QR code opens the record in the leading system; without a link it can only carry the tag.
-    const payload = o.symbology === 'qr' && item.uri ? item.uri : item.assetTag;
-    if (o.symbology === 'qr' && !item.uri) issues.push({ id: 'asset-unlinked', severity: 'warn', message: 'Not linked to the inventory', detail: 'The QR code holds only the asset tag, so a phone camera cannot open the record. Add the link above.' });
+    const payload = assetPayload(item, o, env.appUrl);
+    if (o.symbology === 'qr' && o.qrTarget !== 'labelcraft' && !item.uri) issues.push({ id: 'asset-unlinked', severity: 'warn', message: 'Not linked to the inventory', detail: 'The QR code holds only the asset tag, so a phone camera cannot open the record. Add the link above.' });
     const aspect = W / H;
 
     if (aspect < 1.6) {
@@ -80,7 +96,7 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
       issues.push(...code.issues);
       const tag = tagOps(env, item.assetTag, { x: ox + pad, y: code.box.y + code.box.h + 0.8, w: W - 2 * pad, h: oy + H - pad - (code.box.y + code.box.h + 0.8) }, 9 * k, 'center', 'bottom');
       ops.push(...tag.ops);
-      if (o.ownerLine || o.detail !== 'none') issues.push({ id: 'asset-compact', severity: 'info', message: 'Compact label: only the code and tag are printed', detail: 'Use a 29 × 90 mm label for the name and details.' });
+      if (o.ownerLine || o.logo || o.detail !== 'none') issues.push({ id: 'asset-compact', severity: 'info', message: 'Compact label: only the code and tag are printed', detail: 'Use a 29 × 90 mm label for the name and details.' });
       return { ops, issues };
     }
 
@@ -118,14 +134,26 @@ export const assetKind: KindDef<InventoryItem, AssetOptions> = {
     }
 
     let top = colTop;
-    if (o.ownerLine && H >= 18) {
+    let ownerW = colW;
+    let logoBottom: number | undefined;
+    if (o.logo && org.logo && H >= 18) {
+      // The logo heads the column at the right; the ownership line runs beside it.
+      const op = placeBitmap(org.logo, { x: colX + colW * 0.4, y: colTop, w: colW * 0.6, h: clamp(H * 0.2, 3, 7) }, { align: 'end', valign: 'start' });
+      if (op) {
+        ops.push(op);
+        ownerW = dotsToMm(op.xDots) - colX - 1.5;
+        logoBottom = dotsToMm(op.yDots + op.rows);
+        top = logoBottom + ptToMm(7 * k) * 0.35;
+      }
+    }
+    if (o.ownerLine && H >= 18 && ownerW > 8) {
       const style: TextStyle = { font: ts.roles.caption, caps: true, tracking: ts.capsTracking };
       const sizePt = clamp(5.5 * k, ts.minPt, 7);
       const capH = m.metrics(style.font).cap * ptToMm(sizePt);
       const label = locale === 'de' ? `Eigentum ${org.name}` : `Property of ${org.name}`;
-      const fit = fitText(m, { text: label, box: { x: colX, y: colTop, w: colW, h: capH }, style, maxPt: sizePt, minPt: ts.minPt, wrap: false, maxLines: 1, locale });
+      const fit = fitText(m, { text: label, box: { x: colX, y: logoBottom === undefined ? colTop : logoBottom - capH, w: ownerW, h: capH }, style, maxPt: sizePt, minPt: ts.minPt, wrap: false, maxLines: 1, locale });
       ops.push(...fit.ops);
-      top = fit.lastBaseline + ptToMm(sizePt) * 1.0;
+      top = Math.max(top, fit.lastBaseline + ptToMm(sizePt) * 1.0);
     }
 
     const nameBox = { x: colX, y: top, w: colW, h: Math.max(0, bottom - top - ptToMm(7 * k) * 0.45) };

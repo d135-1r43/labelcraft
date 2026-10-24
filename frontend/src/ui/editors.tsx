@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { entityById, hostOf, isUri, locationCode } from '../db/entities';
-import type { AllergenCode, Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageLocation } from '../db/types';
+import type { AllergenCode, Box, Contact, DbRecord, FoodProduct, InventoryItem, Sign, StorageLocation } from '../db/types';
 import { countryName, normalizePostcode, parseAddress, ruleFor, SUPPORTED_COUNTRIES } from '../kinds/address/address';
 import type { AddressOptions } from '../kinds/address/kind';
-import type { AssetOptions } from '../kinds/asset/kind';
+import { assetPayload, type AssetOptions } from '../kinds/asset/kind';
+import { boxLink, type ContentsOptions } from '../kinds/contents/kind';
 import { ALLERGENS, useBy, type FoodOptions } from '../kinds/food/kind';
 import type { LocationOptions } from '../kinds/location/kind';
 import type { TextOptions } from '../kinds/text/kind';
@@ -279,7 +280,9 @@ export function AddressEditor({ rec, options, onChange, setOption }: EditorProps
 export function AssetEditor({ rec, options, onChange, setOption }: EditorProps<InventoryItem, AssetOptions>) {
   const org = useStore((s) => s.org);
   const set = (patch: Partial<InventoryItem>) => onChange({ ...rec, ...patch });
-  const opens = options.symbology === 'qr' && rec.uri ? rec.uri : rec.assetTag || '—';
+  const system = useStore((s) => s.entities.inventory);
+  const systemName = system.name || hostOf(system.baseUrl) || 'Inventory system';
+  const opens = assetPayload(rec, options, location.origin) || '—';
   return (
     <>
       <Section title="Asset">
@@ -333,6 +336,20 @@ export function AssetEditor({ rec, options, onChange, setOption }: EditorProps<I
             ]}
           />
         </Field>
+        {options.symbology === 'qr' && (
+          <Field label="QR code opens" hint={options.qrTarget === 'labelcraft' ? 'Scanning asks for a Labelcraft sign-in' : rec.uri ? undefined : 'This item has no link yet, so the code holds only the tag'}>
+            <Segmented
+              block
+              label="QR code opens"
+              value={options.qrTarget}
+              onChange={(v) => setOption('qrTarget', v)}
+              options={[
+                { value: 'leading', label: systemName },
+                { value: 'labelcraft', label: 'Labelcraft' },
+              ]}
+            />
+          </Field>
+        )}
         <Field label="Details line">
           <select className="select" value={options.detail} onChange={(e) => setOption('detail', e.target.value)}>
             <option value="serial">Serial number</option>
@@ -342,6 +359,7 @@ export function AssetEditor({ rec, options, onChange, setOption }: EditorProps<I
           </select>
         </Field>
         <Toggle checked={options.ownerLine} onChange={(v) => setOption('ownerLine', v)} label="Ownership line" hint={`“Property of ${org?.name ?? 'your organisation'}”`} />
+        <Toggle checked={options.logo} onChange={(v) => setOption('logo', v)} label="Logo" hint={org?.logo ? 'Your logo, top right' : 'No logo yet: add one in Preferences'} />
       </Section>
     </>
   );
@@ -492,6 +510,43 @@ export function FoodEditor({ rec, options, onChange, setOption, now }: EditorPro
   );
 }
 
+/* ───────── box contents ───────── */
+
+export function ContentsEditor({ rec, options, onChange, setOption }: EditorProps<Box, ContentsOptions>) {
+  const org = useStore((s) => s.org);
+  const setPrefs = useStore((s) => s.set);
+  const set = (patch: Partial<Box>) => onChange({ ...rec, ...patch });
+  const count = rec.items.filter((t) => t.trim()).length;
+  return (
+    <>
+      <Section title="Case">
+        <Field label="Name">
+          <TextInput value={rec.title} onChange={(v) => set({ title: v })} placeholder="FOH rack" />
+        </Field>
+        <Field label="Contents" hint={count ? `${count === 1 ? '1 item' : `${count} items`}, one per line. The type shrinks and columns are added as the list grows.` : 'One item per line.'}>
+          <textarea className="input contents-list" rows={Math.min(14, Math.max(5, rec.items.length + 1))} value={rec.items.join('\n')} onChange={(e) => set({ items: e.target.value.split('\n') })} placeholder={'Stagebox 32/16\nMulticore 50 m\nDI boxes (4)'} />
+        </Field>
+      </Section>
+      <Section title="Layout">
+        <Toggle
+          checked={options.ownerTag}
+          onChange={(v) => setOption('ownerTag', v)}
+          label="Owner"
+          hint={org?.name ? `${org.name} and your address` : 'Your address, from Preferences'}
+        />
+        <Toggle checked={options.logo} onChange={(v) => setOption('logo', v)} label="Logo" hint={org?.logo ? 'Your logo, in black' : 'No logo yet: add one in Preferences'} />
+        {options.logo && !org?.logo && (
+          <button className="btn small" onClick={() => setPrefs('prefsOpen', true)}>
+            Upload a logo
+          </button>
+        )}
+        <Toggle checked={options.qr} onChange={(v) => setOption('qr', v)} label="QR code" hint="Opens this case in Labelcraft" />
+        {options.qr && <div className="hint num">{boxLink(location.origin, rec)}</div>}
+      </Section>
+    </>
+  );
+}
+
 /* ───────── text ───────── */
 
 export function TextEditor({ rec, options, onChange, setOption }: EditorProps<Sign, TextOptions>) {
@@ -530,4 +585,5 @@ export const EDITORS: Record<string, (p: EditorProps<never, never>) => JSX.Eleme
   location: LocationEditor as never,
   food: FoodEditor as never,
   text: TextEditor as never,
+  contents: ContentsEditor as never,
 };

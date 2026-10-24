@@ -17,13 +17,14 @@ public class RecordCollections
 
 	private final Map<String, RecordCollection<?>> byId = new LinkedHashMap<>();
 
-	RecordCollections(ContactRepository contacts, InventoryItemRepository inventory, StorageLocationRepository locations, RecipeRepository recipes, SignRepository signs)
+	RecordCollections(ContactRepository contacts, InventoryItemRepository inventory, StorageLocationRepository locations, RecipeRepository recipes, SignRepository signs, BoxRepository boxes)
 	{
 		add(new RecordCollection<>("contacts", Contact.class, contacts));
 		add(new RecordCollection<>("inventory", InventoryItem.class, inventory));
 		add(new RecordCollection<>("locations", StorageLocation.class, locations));
 		add(new RecordCollection<>("recipes", Recipe.class, recipes));
 		add(new RecordCollection<>("signs", Sign.class, signs));
+		add(new RecordCollection<>("boxes", Box.class, boxes));
 	}
 
 	private void add(RecordCollection<?> c)

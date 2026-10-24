@@ -6,7 +6,7 @@ import type { Measurer, TypeSystem } from '../engine/fonts';
 import type { Frame } from '../engine/frame';
 import type { TypeLocale } from '../engine/typeset';
 
-export type KindId = 'address' | 'asset' | 'location' | 'food' | 'text';
+export type KindId = 'address' | 'asset' | 'location' | 'food' | 'text' | 'contents';
 
 export interface LayoutEnv {
   m: Measurer;
@@ -15,6 +15,8 @@ export interface LayoutEnv {
   locale: TypeLocale;
   org: Organisation;
   now: Date;
+  /** Where this Labelcraft is reachable, for codes that link back to it. */
+  appUrl: string;
 }
 
 export type Rec = DbRecord;

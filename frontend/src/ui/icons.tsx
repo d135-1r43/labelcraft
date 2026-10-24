@@ -46,6 +46,13 @@ export const Icon = {
       <path d="M13.5 9.6c.5-.8 1.3-1.1 2.1-1.1 1.2 0 1.9.7 1.9 1.9v5.1M17.5 12.3c-2.6 0-4 .6-4 1.8 0 .9.7 1.5 1.7 1.5 1.3 0 2.3-1 2.3-2.4" />
     </svg>
   ),
+  contents: (p: SVGProps<SVGSVGElement> = {}) => (
+    <svg {...base(p, 22)}>
+      <path d="M3 7.2 10 4l7 3.2v7.6L10 18l-7-3.2z" />
+      <path d="M3 7.2 10 10.4l7-3.2M10 10.4V18" />
+      <path d="M6.2 9.9v2.6" strokeWidth="2" />
+    </svg>
+  ),
   search: (p: SVGProps<SVGSVGElement> = {}) => (
     <svg {...base(p, 14)} viewBox="0 0 14 14">
       <circle cx="6" cy="6" r="4.2" />

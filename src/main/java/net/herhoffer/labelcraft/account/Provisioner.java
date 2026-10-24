@@ -1,5 +1,6 @@
 package net.herhoffer.labelcraft.account;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,8 +15,8 @@ import net.herhoffer.labelcraft.settings.EntitySettings;
 import net.herhoffer.labelcraft.settings.EntitySettingsRepository;
 
 /**
- * Gives a new user the sample organisation: sender, entity settings and
- * records, so the first screen already has labels on it.
+ * Gives a new user the sample organisation: sender and logo, entity settings
+ * and records, so the first screen already has labels on it.
  */
 @ApplicationScoped
 public class Provisioner
@@ -55,7 +56,28 @@ public class Provisioner
 
 	private void provision(String owner)
 	{
-		if (profiles.findById(owner) != null) return;
+		Profile p = profiles.findById(owner);
+		if (p == null)
+		{
+			p = newProfile(owner);
+			for (EntitySettings s : seed.read("settings", EntitySettings.class))
+			{
+				s.userId = owner;
+				settings.persist(s);
+			}
+			Log.infof("Set up sample data for a new user");
+		}
+		// Collections added after the user signed up get their samples once.
+		for (var c : collections.all())
+		{
+			if (p.seeded.contains(c.id())) continue;
+			seed.insert(c, owner);
+			p.seeded.add(c.id());
+		}
+	}
+
+	private Profile newProfile(String owner)
+	{
 		Profile p = new Profile();
 		p.userId = owner;
 		p.name = sample.name();
@@ -67,14 +89,10 @@ public class Provisioner
 		p.city = a.city().orElse(null);
 		p.region = a.region().orElse(null);
 		p.country = a.country();
+		p.logo = seed.bytes("logo.svg");
+		p.logoType = "image/svg+xml";
+		p.logoUpdatedAt = Instant.now();
 		profiles.persist(p);
-		for (EntitySettings s : seed.read("settings", EntitySettings.class))
-		{
-			s.userId = owner;
-			settings.persist(s);
-		}
-		for (var c : collections.all())
-			seed.insert(c, owner);
-		Log.infof("Set up sample data for a new user");
+		return p;
 	}
 }

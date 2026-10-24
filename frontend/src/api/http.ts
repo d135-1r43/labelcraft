@@ -26,9 +26,9 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
       method,
       headers: {
         'X-Requested-With': 'JavaScript',
-        ...(body === undefined || body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(body === undefined || body instanceof FormData ? {} : { 'Content-Type': body instanceof Blob ? body.type : 'application/json' }),
       },
-      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
+      body: body === undefined ? undefined : body instanceof FormData || body instanceof Blob ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, 'The Labelcraft server cannot be reached.');
@@ -54,7 +54,15 @@ export interface Me {
 
 export const accountApi = {
   me: () => call<Me>('GET', '/me'),
-  setSender: (org: Organisation) => call<Organisation>('PUT', '/organisation', org),
+  setSender: ({ logo: _logo, ...org }: Organisation) => call<Organisation>('PUT', '/organisation', org),
+  uploadLogo: (file: Blob) => call<Organisation>('PUT', '/organisation/logo', file),
+  removeLogo: () => call<Organisation>('DELETE', '/organisation/logo'),
+  /** The logo as uploaded, or null without one. */
+  async logo(): Promise<Blob | null> {
+    const res = await fetch('/api/organisation/logo', { headers: { 'X-Requested-With': 'JavaScript' } });
+    if (res.status === 499 || res.status === 401) sessionEnded();
+    return res.ok ? res.blob() : null;
+  },
 };
 
 export const recordsApi = {
