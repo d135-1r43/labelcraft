@@ -1,7 +1,7 @@
 /** The Labelcraft server (Quarkus), reached on the same origin under /api. */
 import type { DbRecord } from '../db/types';
 import type { EntityId, EntityPrefs } from '../db/entities';
-import type { LabelcraftApi, PrintJob } from './types';
+import type { LabelcraftApi, Organisation, PrintJob } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -13,17 +13,27 @@ export class ApiError extends Error {
   }
 }
 
+/** The session ended (Quarkus answers 499 to marked requests instead of redirecting): sign in again. */
+function sessionEnded(): never {
+  window.location.reload();
+  throw new ApiError(401, 'Signing in again…');
+}
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       method,
-      headers: body === undefined || body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
+      headers: {
+        'X-Requested-With': 'JavaScript',
+        ...(body === undefined || body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      },
       body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, 'The Labelcraft server cannot be reached.');
   }
+  if (res.status === 499 || res.status === 401) sessionEnded();
   if (!res.ok) {
     const problem = await res.json().catch(() => null);
     const fields = problem?.fields ?? {};
@@ -32,6 +42,20 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   }
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
+
+/** The signed-in user, and where they manage their account and sign out. */
+export interface Me {
+  id: string;
+  name?: string;
+  email?: string;
+  accountUrl?: string;
+  logoutUrl: string;
+}
+
+export const accountApi = {
+  me: () => call<Me>('GET', '/me'),
+  setSender: (org: Organisation) => call<Organisation>('PUT', '/organisation', org),
+};
 
 export const recordsApi = {
   list: (entity: EntityId) => call<DbRecord[]>('GET', `/records/${entity}`),

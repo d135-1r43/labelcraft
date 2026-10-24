@@ -29,6 +29,8 @@ public class PrintJob extends PanacheEntityBase
 
 	@Id
 	public UUID id;
+	/** The user who printed it. */
+	public String userId;
 	@Column(name = "printer_id")
 	public String printerId;
 	@Column(name = "printer_name")

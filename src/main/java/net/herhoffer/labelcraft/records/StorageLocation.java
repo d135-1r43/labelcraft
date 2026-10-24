@@ -23,11 +23,10 @@ public class StorageLocation extends RecordEntity
 	{
 	}
 
-	@Valid
 	@NotNull
 	@Size(min = 1, max = 4)
 	@JdbcTypeCode(SqlTypes.JSON)
-	public List<Segment> segments = new ArrayList<>();
+	public List<@Valid Segment> segments = new ArrayList<>();
 
 	@NotNull
 	public String area = "";

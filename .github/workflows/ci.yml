@@ -45,11 +45,16 @@ jobs:
       - name: Build and test
         run: ./mvnw verify -B
 
+      ## The Keycloak provider's own tests; its image build packages it again.
+      - name: Test the Keycloak extension
+        run: ./mvnw -B -q -f keycloak/extension/pom.xml verify
+
       - name: Image tags
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/labelcraft
+          images: |
+            ghcr.io/${{ github.repository_owner }}/labelcraft
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
@@ -57,8 +62,21 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,format=long
 
-      ## Into the runner's Docker first, so the next step can start it.
-      - name: Build the image
+      - name: Keycloak image tags
+        id: meta-keycloak
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ghcr.io/${{ github.repository_owner }}/labelcraft-keycloak
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,format=long
+
+      ## Into the runner's Docker first, so the next step can start them.
+      - name: Build the app image
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -66,41 +84,42 @@ jobs:
           load: true
           push: false
           tags: |
-            labelcraft:smoke
+            ghcr.io/${{ github.repository_owner }}/labelcraft:smoke
             ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      ## Nothing has started the packaged app until here. Against a real
-      ## PostgreSQL: Flyway migrates, the seeder fills the tables, Quinoa
-      ## serves the UI, and a print job renders a PDF with AWT in the image.
-      - name: Check the image serves
+      - name: Build the Keycloak image
+        uses: docker/build-push-action@v7
+        with:
+          context: keycloak
+          load: true
+          push: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/labelcraft-keycloak:smoke
+            ${{ steps.meta-keycloak.outputs.tags }}
+          labels: ${{ steps.meta-keycloak.outputs.labels }}
+
+      ## The production compose file with the images just built: PostgreSQL,
+      ## Keycloak importing the realm, and the app. The script signs in through
+      ## the Labelcraft login page, reads records and prints a PDF.
+      - name: Check the stack serves
+        env:
+          LABELCRAFT_REGISTRY: ghcr.io/${{ github.repository_owner }}
         run: |
           set -eu
-          docker network create smoke
-          docker run -d --name smoke-db --network smoke \
-            -e POSTGRES_USER=labelcraft -e POSTGRES_PASSWORD=labelcraft -e POSTGRES_DB=labelcraft \
-            postgres:17
-          docker run -d --name smoke-app --network smoke -p 8080:8080 \
-            -e DB_URL=jdbc:postgresql://smoke-db:5432/labelcraft \
-            labelcraft:smoke
+          docker compose -p smoke --env-file .github/smoke/smoke.env -f deploy/docker-compose.yml up -d
           ok=
-          for _ in $(seq 1 45); do
-            if curl -fsS http://localhost:8080/api/records/signs | grep -q zerbrechlich; then ok=1; break; fi
+          for _ in $(seq 1 90); do
+            if curl -fsS -o /dev/null http://localhost:8180/realms/labelcraft \
+              && [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)" = 302 ]; then ok=1; break; fi
             sleep 2
           done
-          if [ -z "$ok" ]; then docker logs smoke-app; echo "The image never served its records." >&2; exit 1; fi
-          curl -fsS http://localhost:8080/ | grep -q 'id="root"'
-          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==' | base64 -d > label.png
-          curl -fsS http://localhost:8080/api/print-jobs \
-            -F 'job={"printerId":"p-office","mediaId":"DK-11201","kind":"text","copies":1,"titles":["Smoke"],"geometry":{"widthMm":90,"heightMm":29,"offsetXMm":3,"offsetYMm":1,"printableWidthMm":84,"printableHeightMm":26}};type=application/json' \
-            -F 'page=@label.png;type=image/png' | tee job.json | grep -q '"state":"done"'
-          curl -fsS "http://localhost:8080$(sed -E 's/.*"pdfUrl":"([^"]+)".*/\1/' job.json)" | head -c 5 | grep -q '%PDF-'
+          if [ -z "$ok" ]; then docker compose -p smoke logs; echo "The stack never came up." >&2; exit 1; fi
+          python3 -I .github/smoke/signin.py || { docker compose -p smoke logs app keycloak | tail -80; exit 1; }
 
-      - name: Stop the containers
+      - name: Stop the stack
         if: always()
-        run: |
-          docker rm -f smoke-app smoke-db || true
-          docker network rm smoke || true
+        run: docker compose -p smoke -f deploy/docker-compose.yml down -v || true
 
       - name: Log in to GHCR
         if: github.event_name == 'push'
@@ -110,8 +129,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      ## The same build again, from the layers the step above already made.
-      - name: Push the image
+      ## The same builds again, from the layers the steps above already made.
+      - name: Push the app image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v7
         with:
@@ -120,3 +139,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Push the Keycloak image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v7
+        with:
+          context: keycloak
+          push: true
+          tags: ${{ steps.meta-keycloak.outputs.tags }}
+          labels: ${{ steps.meta-keycloak.outputs.labels }}

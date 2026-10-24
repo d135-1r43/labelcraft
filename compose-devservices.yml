@@ -1,0 +1,40 @@
+# Started by Quarkus in dev mode (Compose Dev Services) next to the
+# PostgreSQL it starts itself: Keycloak with the Labelcraft realm, theme and
+# allowlist, and Mailpit to catch verification and password-reset mail.
+#
+#   Keycloak admin   http://localhost:8180   admin / admin
+#   Mail             http://localhost:8025
+#
+# The theme is mounted, so edits show on reload. Changes to the realm or the
+# extension need `docker compose -f compose-devservices.yml build`.
+services:
+  keycloak:
+    build: ./keycloak
+    image: labelcraft-keycloak:dev
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8180:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: dev-file
+      LABELCRAFT_URL: http://localhost:8080
+      LABELCRAFT_OIDC_SECRET: labelcraft-dev-secret
+      LABELCRAFT_REGISTRATION_ALLOWLIST: ${LABELCRAFT_REGISTRATION_ALLOWLIST:-}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: labelcraft@localhost
+      SMTP_AUTH: "false"
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      SMTP_STARTTLS: "false"
+      SMTP_SSL: "false"
+    volumes:
+      - ./keycloak/themes/labelcraft:/opt/keycloak/themes/labelcraft:ro
+    labels:
+      io.quarkus.devservices.compose.wait_for.logs: .*Running the server in development mode.*
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "8025:8025"

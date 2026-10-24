@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { httpApi, settingsApi } from '../api/http';
+import { accountApi, httpApi, settingsApi, type Me } from '../api/http';
 import type { LabelcraftApi, Organisation, PdfMode, PrintJob, Printer } from '../api/types';
 import { landscapeReadAlong } from '../engine/frame';
 import { mediaById } from '../engine/media';
@@ -43,6 +43,8 @@ interface Store {
 
   /** Which entities are switched on, and where each one's leading records live. */
   entities: Record<EntityId, EntityPrefs>;
+  /** The signed-in user. */
+  me: Me | null;
   /** Why the app could not start, if it could not. */
   bootError: string | null;
   prefsOpen: boolean;
@@ -104,6 +106,7 @@ export const useStore = create<Store>()(
         zoom: 'fit',
         entities: defaultEntityPrefs(),
         bootError: null,
+        me: null,
         prefsOpen: false,
         org: null,
         printers: [],
@@ -181,8 +184,10 @@ export const useStore = create<Store>()(
         },
         async boot() {
           try {
+            // First, so a new user's sample data exists before anything else is read.
+            const me = await accountApi.me();
             const [org, printers, jobs, entities] = await Promise.all([api.organisation(), api.printers(), api.jobs(), settingsApi.all(), useDb.getState().load()]);
-            set({ org, printers, jobs, entities: { ...get().entities, ...entities }, bootError: null });
+            set({ me, org, printers, jobs, entities: { ...get().entities, ...entities }, bootError: null });
           } catch (e) {
             set({ bootError: (e as Error).message });
             return;

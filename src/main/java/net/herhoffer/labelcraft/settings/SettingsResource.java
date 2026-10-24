@@ -13,6 +13,8 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
+import net.herhoffer.labelcraft.account.CurrentUser;
+import net.herhoffer.labelcraft.account.OwnedKey;
 import net.herhoffer.labelcraft.records.RecordCollections;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -50,9 +52,11 @@ public class SettingsResource
 
 	private final EntitySettingsRepository settings;
 	private final RecordCollections collections;
+	private final CurrentUser user;
 
-	SettingsResource(EntitySettingsRepository settings, RecordCollections collections)
+	SettingsResource(EntitySettingsRepository settings, RecordCollections collections, CurrentUser user)
 	{
+		this.user = user;
 		this.settings = settings;
 		this.collections = collections;
 	}
@@ -61,10 +65,11 @@ public class SettingsResource
 	@Operation(summary = "Preferences of every entity, by collection id")
 	public Map<String, EntityPrefs> all()
 	{
+		String owner = user.id();
 		Map<String, EntityPrefs> out = new LinkedHashMap<>();
 		for (var c : collections.all())
 		{
-			EntitySettings s = settings.findById(c.id());
+			EntitySettings s = settings.findById(new OwnedKey(owner, c.id()));
 			if (s != null) out.put(c.id(), EntityPrefs.of(s));
 		}
 		return out;
@@ -77,10 +82,12 @@ public class SettingsResource
 	public EntityPrefs put(@RestPath String id, @Valid @NotNull EntityPrefs prefs)
 	{
 		if (!collections.exists(id)) throw new NotFoundException("No collection named " + id);
-		EntitySettings s = settings.findById(id);
+		String owner = user.id();
+		EntitySettings s = settings.findById(new OwnedKey(owner, id));
 		if (s == null)
 		{
 			s = new EntitySettings();
+			s.userId = owner;
 			s.id = id;
 			settings.persist(s);
 		}

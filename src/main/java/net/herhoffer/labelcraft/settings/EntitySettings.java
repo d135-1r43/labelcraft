@@ -1,18 +1,27 @@
 package net.herhoffer.labelcraft.settings;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import net.herhoffer.labelcraft.account.OwnedKey;
 
 /**
- * Whether an entity is in use, and the leading system its records come from.
+ * Whether an entity is in use for a user, and the leading system its records
+ * come from.
  */
 @Entity
 @Table(name = "entity_settings")
+@IdClass(OwnedKey.class)
 public class EntitySettings extends PanacheEntityBase
 {
+
+	@Id
+	@JsonIgnore
+	public String userId;
 
 	/** The collection: contacts, inventory, locations, recipes, signs. */
 	@Id

@@ -9,6 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
+import net.herhoffer.labelcraft.account.CurrentUser;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
@@ -20,9 +21,11 @@ public class PrintService
 	private final PrintJobRepository jobs;
 	private final PrintDocumentRepository documents;
 	private final PdfRenderer pdf;
+	private final CurrentUser user;
 
-	PrintService(PrinterRepository printers, PrintJobRepository jobs, PrintDocumentRepository documents, PdfRenderer pdf)
+	PrintService(PrinterRepository printers, PrintJobRepository jobs, PrintDocumentRepository documents, PdfRenderer pdf, CurrentUser user)
 	{
+		this.user = user;
 		this.printers = printers;
 		this.jobs = jobs;
 		this.documents = documents;
@@ -48,6 +51,7 @@ public class PrintService
 
 		PrintJob job = new PrintJob();
 		job.id = UUID.randomUUID();
+		job.userId = user.id();
 		job.printerId = printer.id;
 		job.printerName = printer.name;
 		job.mediaId = req.mediaId();
@@ -89,12 +93,13 @@ public class PrintService
 
 	public List<PrintJob> recent()
 	{
-		return jobs.recent(20);
+		return jobs.recent(user.id(), 20);
 	}
 
 	public byte[] pdf(UUID jobId)
 	{
-		PrintDocument doc = documents.findById(jobId);
+		// Someone else's job is as absent as one that never existed.
+		PrintDocument doc = jobs.findOwned(user.id(), jobId) == null ? null : documents.findById(jobId);
 		if (doc == null) throw new NotFoundException();
 		return doc.pdf;
 	}

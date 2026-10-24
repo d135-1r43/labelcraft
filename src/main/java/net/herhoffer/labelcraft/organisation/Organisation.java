@@ -5,7 +5,8 @@ import java.util.Optional;
 import io.smallrye.config.ConfigMapping;
 
 /**
- * Who prints: the return address on address labels, the owner on asset tags.
+ * The sample organisation every new user starts with as their sender (see
+ * {@link net.herhoffer.labelcraft.account.Provisioner}).
  */
 @ConfigMapping(prefix = "labelcraft.organisation")
 public interface Organisation

@@ -12,8 +12,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class PrintJobRepository implements PanacheRepositoryBase<PrintJob, UUID>
 {
 
-	public List<PrintJob> recent(int count)
+	public List<PrintJob> recent(String owner, int count)
 	{
-		return findAll(Sort.descending("createdAt")).page(Page.ofSize(count)).list();
+		return find("userId", Sort.descending("createdAt"), owner).page(Page.ofSize(count)).list();
+	}
+
+	public PrintJob findOwned(String owner, UUID id)
+	{
+		return find("userId = ?1 and id = ?2", owner, id).firstResult();
 	}
 }

@@ -6,6 +6,8 @@ import { kindById } from '../kinds';
 import type { KindId } from '../kinds/types';
 import { compose } from '../state/compose';
 import { useStore } from '../state/store';
+import { accountApi } from '../api/http';
+import { countryName, SUPPORTED_COUNTRIES } from '../kinds/address/address';
 import { Field, TextInput } from './controls';
 import { Icon } from './icons';
 
@@ -48,6 +50,72 @@ function MiniLabel({ kindId, entity }: { kindId: KindId; entity: EntityDef }) {
         {frame.media.id} · {frame.media.name}
       </figcaption>
     </figure>
+  );
+}
+
+const SENDER_SAVE_DELAY_MS = 500;
+let senderTimer: ReturnType<typeof setTimeout> | undefined;
+const countries = [...SUPPORTED_COUNTRIES].sort((a, b) => countryName(a, 'en').localeCompare(countryName(b, 'en')));
+
+/** The return address on address labels and the owner on asset tags. */
+function SenderCard() {
+  const org = useStore((s) => s.org);
+  const set = useStore((s) => s.set);
+  const [error, setError] = useState<string | null>(null);
+  if (!org) return null;
+  const a = org.address;
+  const change = (patch: Partial<typeof org>, address?: Partial<typeof a>) => {
+    const next = { ...org, ...patch, address: { ...a, ...address } };
+    set('org', next);
+    clearTimeout(senderTimer);
+    senderTimer = setTimeout(() => {
+      accountApi.setSender(next).then(
+        () => setError(null),
+        (e: Error) => setError(e.message),
+      );
+    }, SENDER_SAVE_DELAY_MS);
+  };
+  const line = [a.street && `${a.street} ${a.houseNumber ?? ''}`.trim(), [a.postalCode, a.city].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+  return (
+    <article className="sender-card">
+      <div className="content">
+        <div className="head">
+          <span className="name">Sender</span>
+          <small>Your return address on address labels, and the owner on asset tags</small>
+        </div>
+        <div className="row">
+          <Field label="Name or organisation">
+            <TextInput value={org.name} onChange={(v) => change({ name: v }, { company: v || undefined })} />
+          </Field>
+          <Field label="Country">
+            <select className="select" value={a.country} onChange={(e) => change({}, { country: e.target.value })}>
+              {countries.map((c) => (
+                <option key={c} value={c}>
+                  {countryName(c, 'en')}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="row street">
+          <Field label="Street">
+            <TextInput value={a.street} onChange={(v) => change({}, { street: v || undefined })} />
+          </Field>
+          <Field label="No.">
+            <TextInput value={a.houseNumber} onChange={(v) => change({}, { houseNumber: v || undefined })} />
+          </Field>
+        </div>
+        <div className="row pc">
+          <Field label="Postcode">
+            <TextInput value={a.postalCode} onChange={(v) => change({}, { postalCode: v || undefined })} />
+          </Field>
+          <Field label="Town or city">
+            <TextInput value={a.city} onChange={(v) => change({}, { city: v || undefined })} />
+          </Field>
+        </div>
+        <p className="explain">{error ? <span className="bad">Not saved. {error}</span> : line ? <>Printed as: {[org.name, line].join(' · ')}</> : 'No return address yet.'}</p>
+      </div>
+    </article>
   );
 }
 
@@ -159,6 +227,7 @@ export function Preferences() {
       </header>
       {open && (
         <div className="body">
+          <SenderCard />
           <div className="intro">
             <h3>Label types</h3>
             <p>Switch on the labels you print. Each one prints from its own list of records, which Labelcraft keeps a copy of. Where those records are really maintained, in your CRM or inventory, is the leading system. Every record links back to it.</p>

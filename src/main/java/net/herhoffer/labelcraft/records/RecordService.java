@@ -10,6 +10,7 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.NotFoundException;
+import net.herhoffer.labelcraft.account.CurrentUser;
 import net.herhoffer.labelcraft.seed.SeedData;
 
 @ApplicationScoped
@@ -20,9 +21,11 @@ public class RecordService
 	private final ObjectMapper mapper;
 	private final Validator validator;
 	private final SeedData seed;
+	private final CurrentUser user;
 
-	RecordService(RecordCollections collections, ObjectMapper mapper, Validator validator, SeedData seed)
+	RecordService(RecordCollections collections, ObjectMapper mapper, Validator validator, SeedData seed, CurrentUser user)
 	{
+		this.user = user;
 		this.collections = collections;
 		this.mapper = mapper;
 		this.validator = validator;
@@ -31,7 +34,7 @@ public class RecordService
 
 	public List<? extends RecordEntity> list(String collection)
 	{
-		return collections.get(collection).listInOrder();
+		return collections.get(collection).listInOrder(user.id());
 	}
 
 	/**
@@ -45,12 +48,13 @@ public class RecordService
 
 	private <T extends RecordEntity> T put(RecordCollection<T> c, String id, ObjectNode body)
 	{
-		body.remove(List.of("id", "createdAt", "updatedAt"));
+		body.remove(List.of("id", "userId", "createdAt", "updatedAt"));
 		T incoming = mapper.convertValue(body, c.type());
+		incoming.userId = user.id();
 		incoming.id = id;
 		var violations = validator.validate(incoming);
 		if (!violations.isEmpty()) throw new ConstraintViolationException(violations);
-		T existing = c.repository().findById(id);
+		T existing = c.find(incoming.userId, id);
 		Instant now = Instant.now();
 		incoming.createdAt = existing != null ? existing.createdAt : now;
 		incoming.updatedAt = now;
@@ -60,7 +64,7 @@ public class RecordService
 	@Transactional
 	public void delete(String collection, String id)
 	{
-		if (!collections.get(collection).repository().deleteById(id)) throw new NotFoundException();
+		if (!collections.get(collection).delete(user.id(), id)) throw new NotFoundException();
 	}
 
 	/** Replace a collection with the sample records. */
@@ -68,9 +72,10 @@ public class RecordService
 	public List<? extends RecordEntity> reset(String collection)
 	{
 		RecordCollection<?> c = collections.get(collection);
-		c.repository().deleteAll();
+		String owner = user.id();
+		c.deleteAll(owner);
 		c.repository().flush();
-		seed.insert(c);
-		return c.listInOrder();
+		seed.insert(c, owner);
+		return c.listInOrder(owner);
 	}
 }

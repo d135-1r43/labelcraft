@@ -37,16 +37,17 @@ public class SeedData
 	}
 
 	/**
-	 * Insert a collection's samples, keeping their order. Call inside a
-	 * transaction.
+	 * Insert a collection's samples for a user, keeping their order. Call
+	 * inside a transaction.
 	 */
-	public <T extends RecordEntity> void insert(RecordCollection<T> c)
+	public <T extends RecordEntity> void insert(RecordCollection<T> c, String owner)
 	{
 		Instant base = Instant.now();
 		List<T> recs = read(c.id(), c.type());
 		for (int i = 0; i < recs.size(); i++)
 		{
 			T r = recs.get(i);
+			r.userId = owner;
 			r.createdAt = base.plusMillis(i);
 			c.repository().persist(r);
 		}

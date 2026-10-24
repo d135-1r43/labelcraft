@@ -6,19 +6,31 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import net.herhoffer.labelcraft.account.OwnedKey;
 
 /**
- * A working copy of a record. The leading system (CRM, inventory, ERP …) stays
- * the source of truth; {@link #uri} points at the original there.
+ * A working copy of a record, owned by one user. The leading system (CRM,
+ * inventory, ERP …) stays the source of truth; {@link #uri} points at the
+ * original there.
  */
 @MappedSuperclass
+@IdClass(OwnedKey.class)
 public abstract class RecordEntity extends PanacheEntityBase
 {
 
 	public static final String ID_PATTERN = "[A-Za-z0-9_-]{1,64}";
+
+	/**
+	 * The user it belongs to (OIDC subject). Never sent or accepted over the
+	 * API.
+	 */
+	@Id
+	@JsonIgnore
+	public String userId;
 
 	/**
 	 * Chosen by the client, so a record exists the moment it is created in the

@@ -116,6 +116,44 @@ function JobsMenu() {
   );
 }
 
+function initials(name: string) {
+  const parts = name.replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '?';
+}
+
+function UserMenu() {
+  const me = useStore((s) => s.me);
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useDismiss(open, close);
+  if (!me) return null;
+  const name = me.name || me.email || 'Signed in';
+  return (
+    <div className="pop-anchor" ref={ref}>
+      <button className="avatar" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={`Account: ${name}`} title={name}>
+        {initials(name)}
+      </button>
+      {open && (
+        <div className="popover user-menu" role="menu">
+          <div className="who">
+            <b>{name}</b>
+            {me.email && me.email !== name && <small>{me.email}</small>}
+          </div>
+          {me.accountUrl && (
+            <a className="opt" role="menuitem" href={me.accountUrl} target="_blank" rel="noopener noreferrer">
+              Account and password
+              <Icon.external />
+            </a>
+          )}
+          <a className="opt" role="menuitem" href={me.logoutUrl}>
+            Sign out
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TopBar() {
   const locale = useStore((s) => s.locale);
   const set = useStore((s) => s.set);
@@ -145,6 +183,7 @@ export function TopBar() {
       <button className="btn icon ghost" aria-label="Preferences" title="Preferences" onClick={() => set('prefsOpen', true)}>
         <Icon.gear />
       </button>
+      <UserMenu />
     </header>
   );
 }

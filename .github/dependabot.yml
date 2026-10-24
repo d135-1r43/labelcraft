@@ -5,7 +5,9 @@ version: 2
 ## passes is safe to merge, and one that fails is split by hand.
 updates:
   - package-ecosystem: maven
-    directory: /
+    directories:
+      - /
+      - /keycloak/extension
     schedule:
       interval: weekly
       day: monday
@@ -40,7 +42,9 @@ updates:
         patterns: [ "*" ]
 
   - package-ecosystem: docker
-    directory: /src/main/docker
+    directories:
+      - /src/main/docker
+      - /keycloak
     schedule:
       interval: weekly
       day: monday
@@ -48,4 +52,17 @@ updates:
       prefix: "🐳 chore"
     groups:
       docker:
+        patterns: [ "*" ]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /deploy
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "🐳 chore"
+    groups:
+      docker-compose:
         patterns: [ "*" ]

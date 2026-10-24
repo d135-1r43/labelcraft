@@ -4,16 +4,32 @@ import java.util.List;
 
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Sort;
+import net.herhoffer.labelcraft.account.OwnedKey;
 
 /**
  * One kind of record, as the API and the seed data name it: contacts, inventory
  * …
  */
-public record RecordCollection<T extends RecordEntity>(String id, Class<T> type, PanacheRepositoryBase<T, String> repository)
+public record RecordCollection<T extends RecordEntity>(String id, Class<T> type, PanacheRepositoryBase<T, OwnedKey> repository)
 {
 
-	public List<T> listInOrder()
+	public List<T> listInOrder(String owner)
 	{
-		return repository.listAll(Sort.by("createdAt").and("id"));
+		return repository.list("userId", Sort.by("createdAt").and("id"), owner);
+	}
+
+	public T find(String owner, String id)
+	{
+		return repository.findById(new OwnedKey(owner, id));
+	}
+
+	public boolean delete(String owner, String id)
+	{
+		return repository.deleteById(new OwnedKey(owner, id));
+	}
+
+	public long deleteAll(String owner)
+	{
+		return repository.delete("userId", owner);
 	}
 }
