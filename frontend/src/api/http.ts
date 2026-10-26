@@ -54,6 +54,16 @@ export interface Me {
 
 export const accountApi = {
   me: () => call<Me>('GET', '/me'),
+  /** Whether this browser has a session; signed out, the landing page shows instead of the app. */
+  async signedIn(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/me', { headers: { 'X-Requested-With': 'JavaScript' } });
+      return res.status !== 499 && res.status !== 401;
+    } catch {
+      // Unreachable server: let the app boot and say so.
+      return true;
+    }
+  },
   setSender: ({ logo: _logo, ...org }: Organisation) => call<Organisation>('PUT', '/organisation', org),
   uploadLogo: (file: Blob) => call<Organisation>('PUT', '/organisation/logo', file),
   removeLogo: () => call<Organisation>('DELETE', '/organisation/logo'),

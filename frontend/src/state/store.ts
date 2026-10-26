@@ -73,7 +73,7 @@ interface Store {
   upsertJob(job: PrintJob): void;
 }
 
-const initialKinds = Object.fromEntries(
+export const initialKinds = Object.fromEntries(
   KINDS.map((k) => {
     const media = mediaById(k.defaultMedia);
     return [

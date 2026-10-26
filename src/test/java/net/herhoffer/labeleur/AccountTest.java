@@ -28,6 +28,22 @@ class AccountTest
 	}
 
 	@Test
+	void signingInAndRecordLinksNeedASession()
+	{
+		given().redirects().follow(false).get("/login").then().statusCode(401);
+		given().redirects().follow(false).get("/register").then().statusCode(401);
+		given().redirects().follow(false).get("/r/inventory/i1").then().statusCode(401);
+	}
+
+	@Test
+	void theLandingPageIsPublic()
+	{
+		// The UI isn't built in tests, so / has nothing to serve, but nothing
+		// refuses it either.
+		given().redirects().follow(false).get("/").then().statusCode(not(equalTo(401)));
+	}
+
+	@Test
 	@TestSecurity(user = "carol")
 	void aNewUserStartsWithTheSamples()
 	{

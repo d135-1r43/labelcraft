@@ -66,6 +66,8 @@ The engine in `src/engine` works in printer dots, not CSS pixels.
 
 ## Accounts
 
+Signed out, `/` is a one-page introduction with sample labels set by the real engine, and links to `/login` and `/register`. Those two paths, the API and record links (`/r/…`) need a session, so opening them signed out goes to Keycloak; `/register` opens its registration form directly (`prompt=create`, added by `RegistrationRedirect`). Back from Keycloak, the app replaces the path with `/`.
+
 Keycloak signs people in (OIDC code flow with PKCE; the app holds the session). Every user has their own records, settings, sender address and print jobs, keyed by their OIDC subject. A new user starts with the sample organisation's data and can restore it per entity later.
 
 - **Self-registration** asks for email and name. Keycloak sends a verification link, and the password is chosen after the address is confirmed.
@@ -92,7 +94,7 @@ Quarkus with Hibernate ORM and Panache in the repository pattern: one `PanacheRe
 | `DELETE /api/records/{collection}/{id}` | removes Labeleur's copy only |
 | `POST /api/records/{collection}/reset` | restore the samples |
 | `GET`, `PUT /api/settings/entities[/{id}]` | on/off and leading system per entity |
-| `GET /api/me` | the signed-in user; sets up their sample data on first call |
+| `GET /api/me` | the signed-in user; sets up their sample data on first call. Signed out: 499 to `fetch()`, which shows the landing page |
 | `GET`, `PUT /api/organisation` | the user's sender: return address and owner line |
 | `GET`, `PUT`, `DELETE /api/organisation/logo` | the logo on case labels and asset tags: PNG, JPEG, GIF, WebP or SVG, up to 2 MB |
 | `GET /api/printers` | printers and their loaded roll (simulated) |
@@ -116,7 +118,7 @@ Guides: [Quinoa](https://docs.quarkiverse.io/quarkus-quinoa/dev/), [Hibernate OR
 
 GitHub Actions (`.github/workflows/ci.yml`) tests the frontend and the backend, builds the JVM image, and starts it against PostgreSQL to check that it serves records, the UI and a print job's PDF.
 
-- A push to `main` publishes `ghcr.io/<owner>/labeleur:latest`.
+- A push to `main` publishes `ghcr.io/<owner>/labeleur:latest` and calls the Portainer stack webhook (secret `PORTAINER_WEBHOOK_URL`), which redeploys it.
 - `./mvnw release:prepare` sets the version, tags `vX.Y.Z` and pushes; the tag publishes `X.Y.Z`, `X.Y` and `X`. `release:perform` only verifies the tag; nothing goes to a Maven repository.
 
 Each build publishes two images, `labeleur` and `labeleur-keycloak`, and the smoke test starts both with `deploy/docker-compose.yml` and signs in. To run Labeleur yourself, copy `deploy/.env.example` to `deploy/.env`, set the public URLs, secrets and SMTP server, and run `docker compose up -d` in `deploy/`.

@@ -111,7 +111,7 @@ jobs:
           ok=
           for _ in $(seq 1 90); do
             if curl -fsS -o /dev/null http://localhost:8180/realms/labeleur \
-              && [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)" = 302 ]; then ok=1; break; fi
+              && [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/login)" = 302 ]; then ok=1; break; fi
             sleep 2
           done
           if [ -z "$ok" ]; then docker compose -p smoke logs; echo "The stack never came up." >&2; exit 1; fi
@@ -148,3 +148,10 @@ jobs:
           push: true
           tags: ${{ steps.meta-keycloak.outputs.tags }}
           labels: ${{ steps.meta-keycloak.outputs.labels }}
+
+      ## Portainer pulls the new `latest` and redeploys the stack.
+      - name: Redeploy on Portainer
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: curl -fsS -X POST "$PORTAINER_WEBHOOK_URL"

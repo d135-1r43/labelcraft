@@ -64,7 +64,10 @@ class LocalhostIsSecure(http.cookiejar.DefaultCookiePolicy):
 
 
 browser = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar(LocalhostIsSecure())))
+# Signed out, / is the landing page; /login goes to Keycloak.
 status, url, page, _ = request(browser, f"{APP}/")
+if status != 200 or not url.startswith(APP) or 'id="root"' not in page.decode(): fail(f"/ answered {status} at {url}, expected the landing page")
+status, url, page, _ = request(browser, f"{APP}/login")
 page = page.decode()
 if "lc-card" not in page: fail(f"{url} is not the Labeleur login page")
 action = re.search(r'id="kc-form-login"[^>]*action="([^"]+)"', page)
