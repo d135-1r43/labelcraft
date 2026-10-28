@@ -125,6 +125,15 @@ Each build publishes two images, `labeleur` and `labeleur-keycloak`, and the smo
 
 For Portainer, `deploy/portainer/docker-compose.yml` is the same stack in a single file with nothing beside it: paste it into a new stack (or deploy it from this Git repository) and set the variables from `deploy/portainer/stack.env.example`.
 
+Both stacks run PostgreSQL 18, which keeps its data in `/var/lib/postgresql/18/docker` inside the `db` volume. A database from an older stack (PostgreSQL 17, volume mounted at `/var/lib/postgresql/data`) is not upgraded in place: dump it before switching, then restore it into the new stack.
+
+```sh
+docker compose exec db pg_dumpall -U labeleur --clean --if-exists > labeleur.sql   # old stack
+docker compose down -v && docker compose up -d db                                  # new stack, empty volume
+docker compose exec -T db psql -U labeleur -d postgres < labeleur.sql
+docker compose up -d
+```
+
 Dependabot opens one pull request per ecosystem and week (Maven, npm, GitHub Actions, Docker, Compose), with every update in it.
 
 ## Licence
