@@ -1769,6 +1769,45 @@ dialog.prefs::backdrop {
   color: var(--error);
 }
 
+.assistant-card .steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.assistant-card .steps code {
+  font: 500 12px var(--mono);
+  color: var(--ink);
+}
+
+.assistant-card .command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 6px 6px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
+.assistant-card .command code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.assistant-card .command .btn {
+  flex: none;
+}
+
+.assistant-card .explain .num {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
 .logo-field {
   display: flex;
   align-items: center;

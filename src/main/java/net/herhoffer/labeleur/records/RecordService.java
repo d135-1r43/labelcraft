@@ -37,6 +37,12 @@ public class RecordService
 		return collections.get(collection).listInOrder(user.id());
 	}
 
+	/** The record, or {@code null} if the user has none with that id. */
+	public RecordEntity find(String collection, String id)
+	{
+		return collections.get(collection).find(user.id(), id);
+	}
+
 	/**
 	 * Create or replace a record. The id in the path wins over one in the body.
 	 */

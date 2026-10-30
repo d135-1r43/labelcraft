@@ -25,6 +25,7 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.version>3.40.1.1</quarkus.platform.version>
         <pdfbox.version>3.0.8</pdfbox.version>
+        <quarkus-mcp.version>2.0.4</quarkus-mcp.version>
         <release-plugin.version>3.3.1</release-plugin.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.6.1</surefire-plugin.version>
@@ -87,6 +88,11 @@
             <artifactId>quarkus-oidc</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.quarkiverse.mcp</groupId>
+            <artifactId>quarkus-mcp-server-http</artifactId>
+            <version>${quarkus-mcp.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
@@ -94,6 +100,12 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.mcp</groupId>
+            <artifactId>quarkus-mcp-server-test</artifactId>
+            <version>${quarkus-mcp.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

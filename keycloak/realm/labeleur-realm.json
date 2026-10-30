@@ -50,6 +50,36 @@
         "post.logout.redirect.uris": "${LABELEUR_URL}/*",
         "pkce.code.challenge.method": "S256"
       }
+    },
+    {
+      "clientId": "labeleur-mcp",
+      "name": "Labeleur for MCP clients",
+      "description": "Claude Code and other MCP clients sign in here for /mcp. Register with: claude mcp add --transport http --client-id labeleur-mcp --callback-port 33418 labeleur <app URL>/mcp",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:33418/callback", "http://127.0.0.1:33418/callback"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "labeleur-mcp audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "labeleur-mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "authenticationFlows": [

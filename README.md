@@ -103,6 +103,30 @@ Quarkus with Hibernate ORM and Panache in the repository pattern: one `PanacheRe
 
 OpenAPI at `/q/openapi`, Swagger UI at `/q/swagger-ui` in dev mode.
 
+## MCP server
+
+`/mcp` is an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP), so an assistant like Claude Code can work with your records: “make a sign: Kitchen, staff only”. Its tools act as the signed-in user, on the same records as the app:
+
+| Tool | |
+|---|---|
+| `list_collections` | the label types and the fields their records take |
+| `list_records` | a collection's records, optionally only those containing some text |
+| `get_record` | one record and its `/r/…` link |
+| `save_record` | create a record, or change some of its fields; returns the record and the link that opens it on its label, ready to print |
+| `delete_record` | remove Labeleur's copy |
+
+Labels are set and rasterized in the browser, so printing stays in the app: open the link.
+
+**Sign-in.** `/mcp` has its own OIDC tenant that takes bearer access tokens, not the session cookie. A request without one gets a `401` whose `WWW-Authenticate` header points at `/.well-known/oauth-protected-resource/mcp` (RFC 9728), which names the Keycloak realm. The client then signs the user in through the browser with the public client `labeleur-mcp` (code flow with PKCE, redirect `http://localhost:33418/callback`). Only tokens issued for that client (audience `labeleur-mcp`) are accepted.
+
+```sh
+claude mcp add --transport http --client-id labeleur-mcp --callback-port 33418 labeleur http://localhost:8080/mcp
+```
+
+Then `/mcp` in Claude Code → `labeleur` → Authenticate. For a deployment, use its URL. The realm export creates `labeleur-mcp` only when Keycloak imports the realm for the first time; on an existing realm, add the client by hand as in `keycloak/realm/labeleur-realm.json` (public, standard flow, PKCE S256, those redirect URIs, and an audience mapper adding `labeleur-mcp` to the access token).
+
+Guides: [Quarkus MCP Server](https://docs.quarkiverse.io/quarkus-mcp-server/dev/), [OIDC bearer tokens](https://quarkus.io/guides/security-oidc-bearer-token-authentication), [OIDC multi-tenancy](https://quarkus.io/guides/security-openid-connect-multitenancy).
+
 ## Printing
 
 Until printers are driven directly, a print job becomes a PDF with one page per label at the label's physical size. Print it through the Brother driver at 100 %; the PDF switches print scaling off. The print bar offers two ways to make it, so the two can be compared on a real printer:

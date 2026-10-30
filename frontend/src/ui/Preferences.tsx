@@ -189,6 +189,52 @@ function SenderCard() {
   );
 }
 
+/** Tells Claude Code (or another MCP client) how to reach this Labeleur's /mcp server. */
+function AssistantCard() {
+  const origin = window.location.origin;
+  const command = `claude mcp add --transport http --client-id labeleur-mcp --callback-port 33418 labeleur ${origin}/mcp`;
+  const [copied, setCopied] = useState(false);
+  const copy = () =>
+    navigator.clipboard.writeText(command).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  return (
+    <article className="sender-card assistant-card">
+      <div className="content">
+        <div className="head">
+          <span className="name">AI assistant</span>
+          <small>Let Claude Code make and find labels for you: “Make a sign: Kitchen, staff only”</small>
+        </div>
+        <ol className="steps">
+          <li>
+            In a terminal, add Labeleur to Claude Code:
+            <div className="command">
+              <code className="num">{command}</code>
+              <button className="btn ghost small" onClick={copy} aria-live="polite">
+                {copied ? (
+                  <>
+                    <Icon.check /> Copied
+                  </>
+                ) : (
+                  'Copy'
+                )}
+              </button>
+            </div>
+          </li>
+          <li>
+            In Claude Code, type <code>/mcp</code>, choose <b>labeleur</b>, then <b>Authenticate</b>. Sign in with your Labeleur account in the browser window that opens.
+          </li>
+          <li>Ask for what you need. Claude works with your records and answers with a link to each label: open it here to print.</li>
+        </ol>
+        <p className="explain">
+          Other MCP clients: server <span className="num">{origin}/mcp</span> (Streamable HTTP), OAuth client <span className="num">labeleur-mcp</span>, redirect to <span className="num">http://localhost:33418/callback</span>.
+        </p>
+      </div>
+    </article>
+  );
+}
+
 function EntityCard({ entity, lastOn }: { entity: EntityDef; lastOn: boolean }) {
   const prefs = useStore((s) => s.entities[entity.id]);
   const setEntity = useStore((s) => s.setEntity);
@@ -298,6 +344,7 @@ export function Preferences() {
       {open && (
         <div className="body">
           <SenderCard />
+          <AssistantCard />
           <div className="intro">
             <h3>Label types</h3>
             <p>Switch on the labels you print. Each one prints from its own list of records, which Labeleur keeps a copy of. Where those records are really maintained, in your CRM or inventory, is the leading system. Every record links back to it.</p>
