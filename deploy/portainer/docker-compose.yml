@@ -8,7 +8,9 @@
 # labeleur:8080 and KEYCLOAK_URL at labeleur-keycloak:8080.
 services:
   db:
-    image: postgres:18
+    # Stays on 17 until the live database is dumped and restored into 18
+    # (see README); postgres:18 refuses to start on the 17 data in this volume.
+    image: postgres:17
     restart: unless-stopped
     # Keycloak keeps its own database on the same server, created on first start.
     entrypoint:
@@ -22,8 +24,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
       POSTGRES_DB: labeleur
     volumes:
-      # PostgreSQL 18 keeps its data in a versioned directory below this one.
-      - db:/var/lib/postgresql
+      - db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U labeleur"]
       interval: 5s
